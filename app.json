@@ -1,4 +1,7 @@
 {
-  "name": "NewWalletProject",
-  "displayName": "NewWalletProject"
+  "name": "main",
+  "displayName": "NewWalletProject",
+  "ios": {
+    "bundleIdentifier": "com.anonymous.newwalletproject"
+  }
 }

@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { getWalletAddress, clearWallet } from '../services/WalletService';
+import * as Clipboard from 'expo-clipboard';
+import * as Linking from 'expo-linking';
+import { getWalletAddress, clearWallet, getBalance } from '../services/WalletService';
 
 type RootStackParamList = {
   Onboarding: undefined;
@@ -25,7 +27,7 @@ type DashboardScreenNavigationProp = StackNavigationProp<
 
 interface WalletData {
   address: string;
-  usdtBalance: string;
+  ethBalance: string;
 }
 
 const DashboardScreen: React.FC = () => {
@@ -39,14 +41,28 @@ const DashboardScreen: React.FC = () => {
         setIsLoading(true);
         const address = await getWalletAddress();
         if (address) {
-          // TODO: Query actual USDT balance from a testnet
-          setWalletData({ address, usdtBalance: '1,000.00' });
+          const balance = await getBalance(address);
+          setWalletData({ address, ethBalance: balance || '0.0' });
         }
         setIsLoading(false);
       };
       loadWalletData();
     }, [])
   );
+
+  const handleCopyAddress = async () => {
+    if (walletData?.address) {
+      await Clipboard.setStringAsync(walletData.address);
+      Alert.alert('Copied', 'Address copied to clipboard!');
+    }
+  };
+
+  const handleViewOnEtherscan = () => {
+    if (walletData?.address) {
+      const url = `https://sepolia.etherscan.io/address/${walletData.address}`;
+      Linking.openURL(url);
+    }
+  };
 
   const handleReset = async () => {
     try {
@@ -93,17 +109,25 @@ const DashboardScreen: React.FC = () => {
         ) : (
           <>
             <View style={styles.balanceCard}>
-              <Text style={styles.balanceLabel}>Balance</Text>
+              <Text style={styles.balanceLabel}>ETH Balance</Text>
               <Text style={styles.balanceAmount}>
-                ${walletData?.usdtBalance}
+                {walletData?.ethBalance}
               </Text>
-              <Text style={styles.balanceUsd}>USD</Text>
+              <Text style={styles.balanceUsd}>ETH</Text>
             </View>
 
-            <View style={styles.addressContainer}>
-              <Text style={styles.address} numberOfLines={1} ellipsizeMode="middle">
-                {walletData?.address}
-              </Text>
+            <View style={styles.addressRow}>
+              <View style={styles.addressContainer}>
+                <Text style={styles.address} numberOfLines={1} ellipsizeMode="middle">
+                  {walletData?.address}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={handleCopyAddress} style={styles.iconButton}>
+                <Text style={styles.iconText}>[C]</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleViewOnEtherscan} style={styles.iconButton}>
+                <Text style={styles.iconText}>[E]</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.actionsContainer}>
@@ -176,19 +200,32 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#adb5bd',
   },
-  addressContainer: {
+  addressRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 32,
   },
-  address: {
-    fontSize: 14,
-    color: '#6c757d',
-    fontFamily: 'monospace',
+  addressContainer: {
     backgroundColor: '#e9ecef',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     overflow: 'hidden',
+    flexShrink: 1,
+  },
+  address: {
+    fontSize: 14,
+    color: '#6c757d',
+    fontFamily: 'monospace',
+  },
+  iconButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  iconText: {
+    fontSize: 16,
+    color: '#007AFF',
   },
   actionsContainer: {
     flexDirection: 'row',
