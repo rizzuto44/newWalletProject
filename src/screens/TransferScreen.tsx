@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, TextInput, StyleSheet, Alert } from 'react-native';
+import { 
+    View, 
+    Text, 
+    TouchableOpacity, 
+    SafeAreaView, 
+    TextInput, 
+    StyleSheet, 
+    Alert,
+    KeyboardAvoidingView,
+    Platform
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { getWalletAddress } from '../services/WalletService';
+import { getBalance, getWalletAddress } from '../services/WalletService';
+import { Feather } from '@expo/vector-icons';
+
 
 export const TransferScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -11,12 +23,11 @@ export const TransferScreen: React.FC = () => {
 
   useEffect(() => {
     const fetchBalance = async () => {
-      // TODO: Replace with actual balance fetching logic
-      const address = await getWalletAddress();
-      if (address) {
-        // Mock balance for now
-        setBalance('100.00');
-      }
+        const address = await getWalletAddress();
+        if (address) {
+            const currentBalance = await getBalance(address);
+            setBalance(currentBalance || '0.00');
+        }
     };
     fetchBalance();
   }, []);
@@ -36,154 +47,143 @@ export const TransferScreen: React.FC = () => {
       return;
     }
     
-    // TODO: Implement actual send logic
     console.log(`Sending ${amount} to ${toAddress}`);
     navigation.goBack();
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Send</Text>
-        </View>
+        <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+        >
+            <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Feather name="arrow-left" size={24} color="#000" />
+            </TouchableOpacity>
+            <Text style={styles.title}>Send</Text>
+            <View style={{ width: 24 }} />
+            </View>
 
-        {/* Balance Info */}
-        <View style={styles.balanceContainer}>
-          <Text style={styles.balanceLabel}>Available Balance</Text>
-          <Text style={styles.balanceAmount}>${balance}</Text>
-        </View>
+            <View style={styles.content}>
+                <View style={styles.balanceContainer}>
+                    <Text style={styles.balanceLabel}>Available Balance</Text>
+                    <Text style={styles.balanceAmount}>${balance}</Text>
+                </View>
 
-        {/* Transfer Form */}
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>To Address</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter wallet address"
-              value={toAddress}
-              onChangeText={setToAddress}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>To Address</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Enter wallet address"
+                        placeholderTextColor="#999"
+                        value={toAddress}
+                        onChangeText={setToAddress}
+                    />
+                </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Amount (USD)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0.00"
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="numeric"
-            />
-          </View>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Amount (USD)</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="0.00"
+                        placeholderTextColor="#999"
+                        value={amount}
+                        onChangeText={setAmount}
+                        keyboardType="numeric"
+                    />
+                </View>
 
-          {/* Send Button */}
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <Text style={styles.sendButtonText}>Send</Text>
-          </TouchableOpacity>
-        </View>
+                <View style={styles.flexSpacer} />
 
-        {/* Security Note */}
-        <View style={styles.securityNote}>
-          <Text style={styles.securityText}>
-            This transaction will require Face ID authentication
-          </Text>
-        </View>
-      </View>
+                <Text style={styles.securityText}>
+                    This transaction will require Face ID authentication
+                </Text>
+                <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+                    <Text style={styles.sendButtonText}>Send</Text>
+                </TouchableOpacity>
+            </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  backButton: {
-    marginRight: 16,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#2563EB',
-    fontWeight: '500',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  balanceContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  balanceLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  balanceAmount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  form: {
-    flex: 1,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
-  },
-  sendButton: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 24,
-  },
-  sendButtonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  securityNote: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 24,
-  },
-  securityText: {
-    fontSize: 14,
-    color: '#92400E',
-    textAlign: 'center',
-  },
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 10,
+    },
+    title: {
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    content: {
+        flex: 1,
+        paddingHorizontal: 20,
+        paddingTop: 20,
+    },
+    balanceContainer: {
+        backgroundColor: '#f8f9fa',
+        borderRadius: 12,
+        padding: 20,
+        marginBottom: 30,
+        alignItems: 'center',
+    },
+    balanceLabel: {
+        fontSize: 14,
+        color: '#6B7280',
+        marginBottom: 8,
+    },
+    balanceAmount: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#000',
+    },
+    inputGroup: {
+        marginBottom: 20,
+    },
+    inputLabel: {
+        fontSize: 16,
+        color: '#333',
+        marginBottom: 10,
+        fontWeight: '500'
+    },
+    input: {
+        backgroundColor: '#f8f9fa',
+        borderWidth: 1,
+        borderColor: '#EAECEE',
+        borderRadius: 10,
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        fontSize: 16,
+    },
+    flexSpacer: {
+        flex: 1,
+    },
+    securityText: {
+        fontSize: 14,
+        color: '#6B7280',
+        textAlign: 'center',
+        marginBottom: 10,
+    },
+    sendButton: {
+        backgroundColor: '#000',
+        paddingVertical: 18,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    sendButtonText: {
+        color: 'white',
+        fontWeight: '600',
+        fontSize: 16,
+    },
 }); 

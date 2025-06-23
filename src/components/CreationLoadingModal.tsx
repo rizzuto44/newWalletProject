@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, ActivityIndicator, Text, StyleSheet, Modal, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -6,10 +6,16 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { createWallet } from '../services/WalletService';
 
 type RootStackParamList = {
-    Wallet: undefined;
+    MainApp: { 
+        screen: string, 
+        params: { 
+            address: string
+        } 
+    };
+    Onboarding: undefined;
 };
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'Wallet'>;
+type NavigationProp = StackNavigationProp<RootStackParamList>;
 
 interface CreationLoadingModalProps {
     isVisible: boolean;
@@ -21,61 +27,89 @@ type LoadingPhase = 'idle' | 'authenticating' | 'escaping' | 'created';
 const CreationLoadingModal: React.FC<CreationLoadingModalProps> = ({ isVisible, onClose }) => {
     const navigation = useNavigation<NavigationProp>();
     const [phase, setPhase] = useState<LoadingPhase>('idle');
+    const [walletAddress, setWalletAddress] = useState<string>('');
+    const startTime = useRef<number>(0);
+    const minEscapeTime = 5000; // 5 seconds minimum for "Escaping the matrix..."
 
     useEffect(() => {
-        if (isVisible && phase === 'idle') {
-            setPhase('authenticating');
-        } else if (!isVisible) {
-            setPhase('idle'); 
+        if (isVisible) {
+            startWalletCreation();
         }
-    }, [isVisible, phase]);
+    }, [isVisible]);
 
-    useEffect(() => {
-        const executeFlow = async () => {
-            if (phase === 'authenticating') {
-                const result = await LocalAuthentication.authenticateAsync({ promptMessage: 'Authenticate to create wallet' });
-                if (result.success) {
-                    setPhase('escaping');
-                } else {
-                    Alert.alert('Authentication failed');
-                    onClose();
-                }
-            } else if (phase === 'escaping') {
-                const minDelayPromise = new Promise(resolve => setTimeout(resolve, 5000));
-                const createWalletPromise = createWallet();
-                await Promise.all([minDelayPromise, createWalletPromise]);
-                setPhase('created');
-            } else if (phase === 'created') {
-                const navTimeout = setTimeout(() => {
-                    navigation.reset({ index: 0, routes: [{ name: 'Wallet' }] });
-                }, 1000);
-                return () => clearTimeout(navTimeout);
+    const startWalletCreation = async () => {
+        setPhase('authenticating');
+        startTime.current = Date.now();
+
+        try {
+            // Authenticate with Face ID
+            const authResult = await LocalAuthentication.authenticateAsync({
+                promptMessage: 'Authenticate to create your wallet',
+                fallbackLabel: 'Use passcode',
+            });
+
+            if (!authResult.success) {
+                Alert.alert('Authentication Failed', 'Please try again.');
+                onClose();
+                return;
             }
-        };
 
-        executeFlow().catch(err => {
-            console.error(err);
-            Alert.alert('An error occurred');
+            setPhase('escaping');
+
+            // Create wallet
+            const wallet = await createWallet();
+            setWalletAddress(wallet.address);
+
+            // Ensure minimum time for "Escaping the matrix..." message
+            const elapsed = Date.now() - startTime.current;
+            const remainingTime = Math.max(0, minEscapeTime - elapsed);
+            
+            if (remainingTime > 0) {
+                await new Promise(resolve => setTimeout(resolve, remainingTime));
+            }
+
+            setPhase('created');
+
+            // Show "Wallet created" for 1 second
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Navigate to main app
+            navigation.reset({
+                index: 0,
+                routes: [
+                    {
+                        name: 'MainApp',
+                        params: {
+                            screen: 'Home',
+                            params: {
+                                address: wallet.address
+                            }
+                        }
+                    }
+                ]
+            });
+
+        } catch (error) {
+            console.error('Error creating wallet:', error);
+            Alert.alert('Error', 'Failed to create wallet. Please try again.');
             onClose();
-        });
-    }, [phase, navigation, onClose]);
-
-
-    const renderContent = () => {
-        switch (phase) {
-            case 'escaping':
-                return (
-                    <>
-                        <ActivityIndicator size="large" color="#fff" />
-                        <Text style={styles.text}>Escaping the matrix...</Text>
-                    </>
-                );
-            case 'created':
-                return <Text style={styles.text}>Wallet created.</Text>;
-            default:
-                return null; // Don't show anything during 'idle' or 'authenticating'
         }
     };
+
+    const getMessage = () => {
+        switch (phase) {
+            case 'authenticating':
+                return 'Authenticating...';
+            case 'escaping':
+                return 'Escaping the matrix...';
+            case 'created':
+                return 'Wallet created';
+            default:
+                return '';
+        }
+    };
+
+    if (!isVisible) return null;
 
     return (
         <Modal
@@ -84,7 +118,10 @@ const CreationLoadingModal: React.FC<CreationLoadingModalProps> = ({ isVisible, 
             animationType="fade"
         >
             <View style={styles.container}>
-                {renderContent()}
+                <View style={styles.content}>
+                    <ActivityIndicator size="large" color="#fff" />
+                    <Text style={styles.message}>{getMessage()}</Text>
+                </View>
             </View>
         </Modal>
     );
@@ -93,14 +130,18 @@ const CreationLoadingModal: React.FC<CreationLoadingModalProps> = ({ isVisible, 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#121212',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#121212',
     },
-    text: {
-        marginTop: 20,
-        fontSize: 18,
+    content: {
+        alignItems: 'center',
+    },
+    message: {
         color: '#fff',
+        fontSize: 18,
+        marginTop: 20,
+        textAlign: 'center',
     },
 });
 

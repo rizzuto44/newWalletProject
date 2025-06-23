@@ -10,14 +10,19 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { useNavigation, RouteProp } from '@react-navigation/native';
+import { useNavigation, RouteProp, NavigatorScreenParams } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as LocalAuthentication from 'expo-local-authentication';
 import MockApplePaySheet from '../components/MockApplePaySheet';
 
+type TabParamList = {
+    Home: { newBalance?: string };
+    // ... other tabs if they accept params
+};
+  
 type RootStackParamList = {
     AddFunds: undefined;
-    Wallet: { newBalance: string };
+    MainApp: NavigatorScreenParams<TabParamList>;
 };
 
 type AddFundsNavigationProp = StackNavigationProp<RootStackParamList, 'AddFunds'>;
@@ -39,15 +44,20 @@ const AddFundsScreen: React.FC = () => {
       });
       if (result.success) {
         setPaySheetVisible(false);
-        // In a real app, you would add this to the user's actual balance
-        navigation.navigate('Wallet', { newBalance: amount });
+        navigation.navigate('MainApp', { 
+            screen: 'Home', 
+            params: { newBalance: amount } 
+        });
       } else {
         Alert.alert('Authentication failed');
       }
     } else {
       Alert.alert('No hardware for authentication');
       setPaySheetVisible(false);
-      navigation.navigate('Wallet', { newBalance: amount });
+      navigation.navigate('MainApp', { 
+          screen: 'Home', 
+          params: { newBalance: amount } 
+      });
     }
   };
 

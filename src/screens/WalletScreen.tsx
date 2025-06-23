@@ -7,20 +7,22 @@ import {
   Alert,
   SafeAreaView,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import { Feather } from '@expo/vector-icons';
-import { getWalletAddress, clearWallet, getBalance } from '../services/WalletService';
+import { getWalletAddress, getTokenBalance, getTokenPrice } from '../services/WalletService';
 import CubeIcon from '../components/CubeIcon';
 
 type RootStackParamList = {
   Onboarding: undefined;
   Transfer: undefined;
   AddFunds: undefined;
-  Wallet: { newBalance?: string };
+  Wallet: { newBalance?: string; address?: string | null; tokenBalance?: string; };
 };
 
 type WalletScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -29,7 +31,8 @@ type WalletScreenRouteProp = RouteProp<RootStackParamList, 'Wallet'>;
 
 interface WalletData {
   address: string;
-  ethBalance: string;
+  tokenBalance: string;
+  usdBalance: string;
 }
 
 const formatBalance = (balance: string | number) => {
@@ -47,24 +50,86 @@ const WalletScreen: React.FC = () => {
   const route = useRoute<WalletScreenRouteProp>();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
+  const spinValue = React.useRef(new Animated.Value(0)).current;
 
+  // Load initial wallet data
   useFocusEffect(
     React.useCallback(() => {
       const loadWalletData = async () => {
-        setIsLoading(true);
-        const address = await getWalletAddress();
-        if (address) {
-          const onChainBalance = await getBalance(address);
-          const currentBalance = parseFloat(walletData?.ethBalance || onChainBalance || '0.0');
-          const newFunds = parseFloat(route.params?.newBalance || '0');
-          const totalBalance = currentBalance + newFunds;
-          setWalletData({ address, ethBalance: totalBalance.toString() });
+        try {
+          setIsLoading(true);
+          
+          // Get address from navigation params or storage
+          let address = route.params?.address;
+          if (!address) {
+            address = await getWalletAddress();
+          }
+          
+          if (address) {
+            // Set initial state with 0 balances
+            setWalletData({ address, tokenBalance: '0', usdBalance: '0.00' });
+            
+            // Start loading balance and price in background
+            loadBalanceAndPrice(address);
+          }
+        } catch (error) {
+          console.error('Error loading wallet data:', error);
+        } finally {
+          setIsLoading(false);
         }
-        setIsLoading(false);
       };
+
       loadWalletData();
-    }, [route.params?.newBalance])
+    }, [route.params?.address])
   );
+
+  const loadBalanceAndPrice = async (address: string) => {
+    try {
+      setIsBalanceLoading(true);
+      // Fetch both simultaneously
+      const [balance, price] = await Promise.all([
+        getTokenBalance(address),
+        getTokenPrice()
+      ]);
+      const usdValue = (parseFloat(balance) * price).toFixed(2);
+      setWalletData(prev => prev ? { ...prev, tokenBalance: balance, usdBalance: usdValue } : null);
+    } catch (error) {
+      console.error('Error loading balance and price:', error);
+      // Still update with what we have, or show an error
+      setWalletData(prev => prev ? { ...prev, tokenBalance: 'N/A', usdBalance: 'N/A' } : null);
+    } finally {
+      setIsBalanceLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!walletData?.address || isRefreshing) return;
+    
+    setIsRefreshing(true);
+    const spinAnimation = Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      })
+    );
+    spinAnimation.start();
+
+    try {
+      await loadBalanceAndPrice(walletData.address);
+    } finally {
+      setIsRefreshing(false);
+      spinAnimation.stop();
+      spinValue.setValue(0);
+    }
+  };
+
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   const handleCopyAddress = async () => {
     if (walletData?.address) {
@@ -101,7 +166,9 @@ const WalletScreen: React.FC = () => {
             <View style={{ marginLeft: 12 }}>
                 <Text style={styles.walletTitle}>Wallet</Text>
                 <View style={styles.addressContainer}>
-                    <Text style={styles.walletAddress}>{truncateAddress(walletData?.address || '')}</Text>
+                    <Text style={styles.walletAddress}>
+                        {walletData?.address ? truncateAddress(walletData.address) : 'Loading...'}
+                    </Text>
                     <TouchableOpacity onPress={handleCopyAddress} style={styles.iconButton}>
                         <Feather name="copy" size={16} color="gray" />
                     </TouchableOpacity>
@@ -124,9 +191,24 @@ const WalletScreen: React.FC = () => {
 
         {/* Balance */}
         <View style={styles.balanceContainer}>
-            <Text style={styles.balanceLabel}>Balance</Text>
+            <View style={styles.balanceHeader}>
+                <Text style={styles.balanceLabel}>Balance</Text>
+                <TouchableOpacity 
+                    style={styles.refreshButton} 
+                    onPress={handleRefresh}
+                    disabled={isRefreshing || isBalanceLoading}
+                >
+                    <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                        <Feather 
+                            name="refresh-cw" 
+                            size={20} 
+                            color={isRefreshing || isBalanceLoading ? "#999" : "#666"} 
+                        />
+                    </Animated.View>
+                </TouchableOpacity>
+            </View>
             <Text style={styles.balanceAmount}>
-                ${walletData ? formatBalance(walletData.ethBalance) : '0'}
+                ${isBalanceLoading && !walletData?.usdBalance ? '...' : walletData?.usdBalance || '0.00'}
             </Text>
         </View>
         
@@ -166,6 +248,7 @@ const styles = StyleSheet.create({
     },
     walletTitle: {
         fontSize: 16,
+        fontWeight: '600',
         color: 'gray',
     },
     addressContainer: {
@@ -173,9 +256,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     walletAddress: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#000',
+        fontSize: 14,
+        color: '#333',
     },
     iconButton: {
         marginLeft: 8,
@@ -199,18 +281,33 @@ const styles = StyleSheet.create({
     balanceContainer: {
         marginBottom: 30,
     },
+    balanceHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        marginBottom: 8,
+    },
     balanceLabel: {
         fontSize: 16,
         color: 'gray',
-        marginBottom: 8,
+    },
+    refreshButton: {
+        marginLeft: 8,
+        padding: 4,
     },
     balanceAmount: {
         fontSize: 48,
         fontWeight: 'bold',
         color: '#000',
     },
+    tokenAmount: {
+        fontSize: 16,
+        color: 'gray',
+        marginTop: 4,
+    },
     actionsContainer: {
         flexDirection: 'row',
+        justifyContent: 'space-around',
     },
     actionButton: {
         backgroundColor: '#000',

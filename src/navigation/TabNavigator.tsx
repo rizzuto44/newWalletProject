@@ -34,8 +34,10 @@ const TabNavigator = () => {
         tabBarActiveTintColor: '#000',
         tabBarInactiveTintColor: 'gray',
         tabBarStyle: {
-            backgroundColor: '#fff',
-            borderTopColor: '#eee'
+            backgroundColor: '#f8f9fa',
+            borderTopColor: '#eee',
+            height: 90,
+            paddingTop: 10,
         },
         tabBarLabelStyle: {
             fontWeight: '600'
@@ -60,9 +62,6 @@ const TabNavigator = () => {
       <Tab.Screen 
         name="Settings" 
         component={SettingsScreen} 
-        listeners={{
-            tabPress: e => e.preventDefault(),
-        }}
       />
     </Tab.Navigator>
   );

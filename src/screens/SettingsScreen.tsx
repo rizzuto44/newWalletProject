@@ -1,20 +1,98 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { Feather } from '@expo/vector-icons';
+import { clearWallet } from '../services/WalletService';
+
+type RootStackParamList = {
+    Onboarding: undefined;
+};
+
+type SettingsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Onboarding'>;
 
 const SettingsScreen = () => {
+    const navigation = useNavigation<SettingsScreenNavigationProp>();
+
+    const handleResetWallet = () => {
+        Alert.alert(
+            "Reset Wallet",
+            "Are you sure you want to reset your wallet? This action is irreversible.",
+            [
+                {
+                    text: "Cancel",
+                    style: "cancel"
+                },
+                { 
+                    text: "Reset", 
+                    onPress: async () => {
+                        try {
+                            await clearWallet();
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'Onboarding' }],
+                            });
+                        } catch (error) {
+                            Alert.alert("Error", "Failed to reset wallet.");
+                        }
+                    },
+                    style: "destructive"
+                }
+            ]
+        );
+    };
+
   return (
-    <View style={styles.container}>
-      <Text>Settings Screen</Text>
-    </View>
+    <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+            <Text style={styles.title}>Settings</Text>
+        </View>
+        <View style={styles.content}>
+            <TouchableOpacity style={styles.button} onPress={handleResetWallet}>
+                <Feather name="trash-2" size={20} color="#E53E3E" />
+                <Text style={styles.buttonText}>Reset Wallet</Text>
+            </TouchableOpacity>
+        </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    header: {
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0'
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+    },
+    content: {
+        flex: 1,
+        padding: 20,
+    },
+    button: {
+        backgroundColor: '#FFF5F5',
+        borderColor: '#FED7D7',
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 15,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    buttonText: {
+        color: '#E53E3E',
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: 10
+    }
 });
 
 export default SettingsScreen; 
