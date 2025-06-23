@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, Alert } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import CreationLoadingModal from '../components/CreationLoadingModal';
 
 export const OnboardingScreen: React.FC = () => {
     const [isCreating, setIsCreating] = useState(false);
 
     const handleCreateWallet = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setIsCreating(true);
     };
 

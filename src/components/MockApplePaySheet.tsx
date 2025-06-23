@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -6,8 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 
 interface MockApplePaySheetProps {
   isVisible: boolean;
@@ -32,6 +35,16 @@ const MockApplePaySheet: React.FC<MockApplePaySheetProps> = ({
     }
   }, [isVisible]);
 
+  const handlePaymentSuccess = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    onPaymentSuccess();
+  };
+
+  const handleClose = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClose();
+  };
+
   return (
     <Modal
       animationType="slide"
@@ -44,7 +57,7 @@ const MockApplePaySheet: React.FC<MockApplePaySheetProps> = ({
             <Ionicons name="logo-apple" size={24} color="white" />
             <Text style={styles.headerText}>Pay</Text>
           </View>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
             <Feather name="x" size={20} color="#E5E5EA" />
           </TouchableOpacity>
         </View>

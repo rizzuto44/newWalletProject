@@ -15,6 +15,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { getWalletAddress, getTokenBalance, getTokenPrice } from '../services/WalletService';
 import CubeIcon from '../components/CubeIcon';
 
@@ -22,7 +23,7 @@ type RootStackParamList = {
   Onboarding: undefined;
   Transfer: undefined;
   AddFunds: undefined;
-  Wallet: { newBalance?: string; address?: string | null; tokenBalance?: string; };
+  Wallet: { newBalance?: string; address?: string | null; tokenBalance?: string; shouldRefreshBalance?: boolean; };
 };
 
 type WalletScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -68,11 +69,39 @@ const WalletScreen: React.FC = () => {
           }
           
           if (address) {
-            // Set initial state with 0 balances
-            setWalletData({ address, tokenBalance: '0', usdBalance: '0.00' });
+            setWalletData(prev => ({ 
+              address, 
+              tokenBalance: prev?.tokenBalance || '0', 
+              usdBalance: prev?.usdBalance || '0.00' 
+            }));
             
-            // Start loading balance and price in background
-            loadBalanceAndPrice(address);
+            // Check if we should refresh balance (from AddFunds flow)
+            if (route.params?.shouldRefreshBalance) {
+              setIsBalanceLoading(true);
+              const tokenBalance = await getTokenBalance(address);
+              const tokenPrice = await getTokenPrice();
+              const usdBalance = (parseFloat(tokenBalance) * tokenPrice).toFixed(2);
+              
+              setWalletData(prev => ({
+                address,
+                tokenBalance,
+                usdBalance
+              }));
+              setIsBalanceLoading(false);
+            } else {
+              // Load balance normally
+              setIsBalanceLoading(true);
+              const tokenBalance = await getTokenBalance(address);
+              const tokenPrice = await getTokenPrice();
+              const usdBalance = (parseFloat(tokenBalance) * tokenPrice).toFixed(2);
+              
+              setWalletData(prev => ({
+                address,
+                tokenBalance,
+                usdBalance
+              }));
+              setIsBalanceLoading(false);
+            }
           }
         } catch (error) {
           console.error('Error loading wallet data:', error);
@@ -82,47 +111,28 @@ const WalletScreen: React.FC = () => {
       };
 
       loadWalletData();
-    }, [route.params?.address])
+    }, [route.params?.shouldRefreshBalance])
   );
 
-  const loadBalanceAndPrice = async (address: string) => {
-    try {
-      setIsBalanceLoading(true);
-      // Fetch both simultaneously
-      const [balance, price] = await Promise.all([
-        getTokenBalance(address),
-        getTokenPrice()
-      ]);
-      const usdValue = (parseFloat(balance) * price).toFixed(2);
-      setWalletData(prev => prev ? { ...prev, tokenBalance: balance, usdBalance: usdValue } : null);
-    } catch (error) {
-      console.error('Error loading balance and price:', error);
-      // Still update with what we have, or show an error
-      setWalletData(prev => prev ? { ...prev, tokenBalance: 'N/A', usdBalance: 'N/A' } : null);
-    } finally {
-      setIsBalanceLoading(false);
-    }
-  };
-
   const handleRefresh = async () => {
-    if (!walletData?.address || isRefreshing) return;
+    if (!walletData?.address) return;
     
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsRefreshing(true);
-    const spinAnimation = Animated.loop(
-      Animated.timing(spinValue, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      })
-    );
-    spinAnimation.start();
-
     try {
-      await loadBalanceAndPrice(walletData.address);
+      const tokenBalance = await getTokenBalance(walletData.address);
+      const tokenPrice = await getTokenPrice();
+      const usdBalance = (parseFloat(tokenBalance) * tokenPrice).toFixed(2);
+      
+      setWalletData(prev => prev ? {
+        ...prev,
+        tokenBalance,
+        usdBalance
+      } : null);
+    } catch (error) {
+      console.error('Error refreshing balance:', error);
     } finally {
       setIsRefreshing(false);
-      spinAnimation.stop();
-      spinValue.setValue(0);
     }
   };
 
@@ -132,9 +142,10 @@ const WalletScreen: React.FC = () => {
   });
 
   const handleCopyAddress = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (walletData?.address) {
       await Clipboard.setStringAsync(walletData.address);
-      Alert.alert('Copied', 'Address copied to clipboard!');
+      Alert.alert('Copied!', 'Wallet address copied to clipboard');
     }
   };
 
@@ -146,8 +157,14 @@ const WalletScreen: React.FC = () => {
   };
 
   const handleSend = () => navigation.navigate('Transfer');
-  const handleAddFunds = () => navigation.navigate('AddFunds');
-  const handleReceive = () => Alert.alert('Receive', 'This feature is not yet implemented.');
+  const handleAddFunds = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('AddFunds');
+  };
+  const handleReceive = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert('Receive', 'This feature is not yet implemented.');
+  };
 
   if (isLoading) {
     return (

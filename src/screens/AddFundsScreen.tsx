@@ -13,14 +13,17 @@ import {
 import { useNavigation, RouteProp, NavigatorScreenParams } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as Haptics from 'expo-haptics';
 import MockApplePaySheet from '../components/MockApplePaySheet';
 
 type TabParamList = {
-    Home: { newBalance?: string };
+    Home: { newBalance?: string; shouldRefreshBalance?: boolean };
     // ... other tabs if they accept params
 };
   
 type RootStackParamList = {
+    Onboarding: undefined;
+    Transfer: undefined;
     AddFunds: undefined;
     MainApp: NavigatorScreenParams<TabParamList>;
 };
@@ -33,10 +36,12 @@ const AddFundsScreen: React.FC = () => {
   const [isPaySheetVisible, setPaySheetVisible] = useState(false);
 
   const handleNext = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPaySheetVisible(true);
   };
 
   const handlePaymentSuccess = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const hasHardware = await LocalAuthentication.hasHardwareAsync();
     if (hasHardware) {
       const result = await LocalAuthentication.authenticateAsync({
@@ -46,7 +51,7 @@ const AddFundsScreen: React.FC = () => {
         setPaySheetVisible(false);
         navigation.navigate('MainApp', { 
             screen: 'Home', 
-            params: { newBalance: amount } 
+            params: { shouldRefreshBalance: true } 
         });
       } else {
         Alert.alert('Authentication failed');
@@ -56,9 +61,14 @@ const AddFundsScreen: React.FC = () => {
       setPaySheetVisible(false);
       navigation.navigate('MainApp', { 
           screen: 'Home', 
-          params: { newBalance: amount } 
+          params: { shouldRefreshBalance: true } 
       });
     }
+  };
+
+  const handleCancel = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.goBack();
   };
 
   return (
@@ -67,7 +77,7 @@ const AddFundsScreen: React.FC = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={handleCancel}>
             <Text style={styles.backButton}>Cancel</Text>
           </TouchableOpacity>
         </View>

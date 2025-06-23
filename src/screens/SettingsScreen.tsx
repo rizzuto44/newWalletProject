@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView } from 'r
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { clearWallet } from '../services/WalletService';
 
 type RootStackParamList = {
@@ -15,9 +16,10 @@ const SettingsScreen = () => {
     const navigation = useNavigation<SettingsScreenNavigationProp>();
 
     const handleResetWallet = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
         Alert.alert(
             "Reset Wallet",
-            "Are you sure you want to reset your wallet? This action is irreversible.",
+            "This will delete your wallet and all funds. This action cannot be undone.",
             [
                 {
                     text: "Cancel",
@@ -25,6 +27,7 @@ const SettingsScreen = () => {
                 },
                 { 
                     text: "Reset", 
+                    style: "destructive",
                     onPress: async () => {
                         try {
                             await clearWallet();
@@ -33,10 +36,10 @@ const SettingsScreen = () => {
                                 routes: [{ name: 'Onboarding' }],
                             });
                         } catch (error) {
+                            console.error('Error resetting wallet:', error);
                             Alert.alert("Error", "Failed to reset wallet.");
                         }
                     },
-                    style: "destructive"
                 }
             ]
         );

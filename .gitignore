@@ -1,3 +1,4 @@
 .env
 .expo/xcodebuild-error.log
 .expo/xcodebuild.log
+node_modules

@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { getBalance, getWalletAddress } from '../services/WalletService';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 
 
 export const TransferScreen: React.FC = () => {
@@ -33,22 +34,29 @@ export const TransferScreen: React.FC = () => {
   }, []);
 
 
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.goBack();
+  };
+
   const handleSend = () => {
-    if (!toAddress.trim()) {
-      Alert.alert('Error', 'Please enter a recipient address');
-      return;
-    }
-    if (!amount.trim() || parseFloat(amount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
-      return;
-    }
-    if (parseFloat(amount) > parseFloat(balance)) {
-      Alert.alert('Error', 'Insufficient balance');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!toAddress.trim() || !amount.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
     
-    console.log(`Sending ${amount} to ${toAddress}`);
-    navigation.goBack();
+    // Simulate sending transaction
+    Alert.alert(
+      'Transaction Sent!',
+      `Sent ${amount} tokens to ${toAddress}`,
+      [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack()
+        }
+      ]
+    );
   };
 
   return (
@@ -58,7 +66,7 @@ export const TransferScreen: React.FC = () => {
             style={{ flex: 1 }}
         >
             <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
+            <TouchableOpacity onPress={handleBack}>
                 <Feather name="arrow-left" size={24} color="#000" />
             </TouchableOpacity>
             <Text style={styles.title}>Send</Text>
