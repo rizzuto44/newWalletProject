@@ -13,6 +13,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
+import { Feather } from '@expo/vector-icons';
 import { getWalletAddress, clearWallet, getBalance } from '../services/WalletService';
 
 type RootStackParamList = {
@@ -96,7 +97,15 @@ const DashboardScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Wallet</Text>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Wallet</Text>
+            <TouchableOpacity onPress={handleCopyAddress} style={styles.iconButton}>
+              <Feather name="copy" size={22} color="#000" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleViewOnEtherscan} style={styles.iconButton}>
+              <Feather name="globe" size={22} color="#000" />
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity onPress={handleReset}>
             <Text style={styles.resetButtonText}>Reset</Text>
           </TouchableOpacity>
@@ -109,25 +118,10 @@ const DashboardScreen: React.FC = () => {
         ) : (
           <>
             <View style={styles.balanceCard}>
-              <Text style={styles.balanceLabel}>ETH Balance</Text>
               <Text style={styles.balanceAmount}>
-                {walletData?.ethBalance}
+                ${walletData?.ethBalance}
               </Text>
-              <Text style={styles.balanceUsd}>ETH</Text>
-            </View>
-
-            <View style={styles.addressRow}>
-              <View style={styles.addressContainer}>
-                <Text style={styles.address} numberOfLines={1} ellipsizeMode="middle">
-                  {walletData?.address}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={handleCopyAddress} style={styles.iconButton}>
-                <Text style={styles.iconText}>[C]</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleViewOnEtherscan} style={styles.iconButton}>
-                <Text style={styles.iconText}>[E]</Text>
-              </TouchableOpacity>
+              <Text style={styles.balanceUsd}>USD</Text>
             </View>
 
             <View style={styles.actionsContainer}>
@@ -165,14 +159,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#000',
+    marginRight: 8,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   resetButtonText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: '#000',
+    marginLeft: 16,
   },
   loaderContainer: {
     flex: 1,
@@ -186,10 +190,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  balanceLabel: {
-    fontSize: 16,
-    color: '#6c757d',
-  },
   balanceAmount: {
     fontSize: 48,
     fontWeight: 'bold',
@@ -200,32 +200,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#adb5bd',
   },
-  addressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-  },
-  addressContainer: {
-    backgroundColor: '#e9ecef',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    overflow: 'hidden',
-    flexShrink: 1,
-  },
-  address: {
-    fontSize: 14,
-    color: '#6c757d',
-    fontFamily: 'monospace',
-  },
   iconButton: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  iconText: {
-    fontSize: 16,
-    color: '#007AFF',
+    paddingHorizontal: 8,
   },
   actionsContainer: {
     flexDirection: 'row',
