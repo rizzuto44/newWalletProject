@@ -1,19 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, TextInput, StyleSheet, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { getWalletAddress } from '../services/WalletService';
 
-interface TransferScreenProps {
-  balance: string;
-  onSend: (toAddress: string, amount: string) => void;
-  onBack: () => void;
-}
-
-export const TransferScreen: React.FC<TransferScreenProps> = ({
-  balance,
-  onSend,
-  onBack,
-}) => {
+export const TransferScreen: React.FC = () => {
+  const navigation = useNavigation();
   const [toAddress, setToAddress] = useState('');
   const [amount, setAmount] = useState('');
+  const [balance, setBalance] = useState('0.00');
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      // TODO: Replace with actual balance fetching logic
+      const address = await getWalletAddress();
+      if (address) {
+        // Mock balance for now
+        setBalance('100.00');
+      }
+    };
+    fetchBalance();
+  }, []);
+
 
   const handleSend = () => {
     if (!toAddress.trim()) {
@@ -29,7 +36,9 @@ export const TransferScreen: React.FC<TransferScreenProps> = ({
       return;
     }
     
-    onSend(toAddress, amount);
+    // TODO: Implement actual send logic
+    console.log(`Sending ${amount} to ${toAddress}`);
+    navigation.goBack();
   };
 
   return (
@@ -37,7 +46,7 @@ export const TransferScreen: React.FC<TransferScreenProps> = ({
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Send</Text>

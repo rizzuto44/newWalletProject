@@ -5,75 +5,65 @@
  * @format
  */
 
-import React, { useState } from 'react';
-import { StatusBar, useColorScheme } from 'react-native';
-import { OnboardingScreen, HomeScreen, TransferScreen } from './src/screens';
+import React, { useState, useEffect } from 'react';
+import { StatusBar, useColorScheme, ActivityIndicator, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import DashboardScreen from './src/screens/DashboardScreen';
+import LoadingScreen from './src/screens/LoadingScreen';
+import { TransferScreen } from './src/screens/TransferScreen';
+import { getWalletAddress } from './src/services/WalletService';
 
-type Screen = 'onboarding' | 'home' | 'transfer';
+const Stack = createStackNavigator();
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
-  const [currentScreen, setCurrentScreen] = useState<Screen>('onboarding');
-  const [walletAddress, setWalletAddress] = useState<string>('');
-  const [balance, setBalance] = useState<string>('0.00');
+  const [initialRoute, setInitialRoute] = useState<string | null>(null);
 
-  const handleLogin = () => {
-    // This will be replaced by the new wallet logic
-    setWalletAddress('0x1234...5678'); // Placeholder
-    setBalance('100.00'); // Placeholder
-    setCurrentScreen('home');
-  };
+  useEffect(() => {
+    const checkWallet = async () => {
+      const address = await getWalletAddress();
+      if (address) {
+        setInitialRoute('Dashboard');
+      } else {
+        setInitialRoute('Onboarding');
+      }
+    };
 
-  const handleTransfer = () => {
-    setCurrentScreen('transfer');
-  };
+    checkWallet();
+  }, []);
 
-  const handleBack = () => {
-    setCurrentScreen('home');
-  };
-
-  const handleSend = (toAddress: string, amount: string) => {
-    // This will be replaced by the new wallet logic
-    console.log(`Sending ${amount} USD to ${toAddress}`);
-    setCurrentScreen('home');
-  };
-
-  const handleBuy = () => {
-    // This will be replaced by the new wallet logic
-    console.log('Opening Coinbase on-ramp');
-  };
-
-  const renderScreen = () => {
-    switch (currentScreen) {
-      case 'onboarding':
-        return <OnboardingScreen onLogin={handleLogin} />;
-      case 'home':
-        return (
-          <HomeScreen
-            balance={balance}
-            walletAddress={walletAddress}
-            onTransfer={handleTransfer}
-            onBuy={handleBuy}
-          />
-        );
-      case 'transfer':
-        return (
-          <TransferScreen
-            balance={balance}
-            onSend={handleSend}
-            onBack={handleBack}
-          />
-        );
-      default:
-        return <OnboardingScreen onLogin={handleLogin} />;
-    }
-  };
+  if (!initialRoute) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
-    <>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      {renderScreen()}
-    </>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <NavigationContainer>
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+          <Stack.Navigator 
+            initialRouteName={initialRoute}
+            screenOptions={{
+              headerShown: false,
+              animation: 'fade',
+            }}
+          >
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            <Stack.Screen name="Loading" component={LoadingScreen} />
+            <Stack.Screen name="Dashboard" component={DashboardScreen} />
+            <Stack.Screen name="Transfer" component={TransferScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
 

@@ -1,118 +1,115 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import * as LocalAuthentication from 'expo-local-authentication';
 
-interface OnboardingScreenProps {
-  onLogin: () => void;
-  isLoading?: boolean;
-}
+type RootStackParamList = {
+    Loading: undefined;
+};
 
-export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLogin, isLoading = false }) => {
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>iosWalletDemo</Text>
-          <Text style={styles.subtitle}>Your secure crypto wallet</Text>
-        </View>
+type OnboardingScreenNavigationProp = StackNavigationProp<
+    RootStackParamList,
+    'Loading'
+>;
 
-        {/* Main Content */}
-        <View style={styles.mainContent}>
-          <Text style={styles.welcomeText}>Welcome to your wallet</Text>
-          
-          <Text style={styles.description}>
-            Create a self-custodial wallet with passkey authentication for secure, seamless access to your digital assets.
-          </Text>
+export const OnboardingScreen: React.FC = () => {
+    const navigation = useNavigation<OnboardingScreenNavigationProp>();
+    const [isLoading, setIsLoading] = useState(false);
 
-          {/* Login Button */}
-          <TouchableOpacity 
-            style={[styles.button, isLoading && styles.buttonDisabled]} 
-            onPress={onLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.buttonText}>Create Wallet</Text>
-            )}
-          </TouchableOpacity>
+    const handleCreateWallet = async () => {
+        setIsLoading(true);
+        try {
+            const hasHardware = await LocalAuthentication.hasHardwareAsync();
+            if (!hasHardware) {
+                Alert.alert("Unsupported", "Your device doesn't support biometric authentication.");
+                setIsLoading(false);
+                return;
+            }
 
-          {/* Info Text */}
-          <Text style={styles.infoText}>
-            Your keys, your crypto. We never have access to your funds.
-          </Text>
-        </View>
-      </View>
-    </SafeAreaView>
-  );
+            const result = await LocalAuthentication.authenticateAsync({
+                promptMessage: 'Authenticate to create your wallet',
+            });
+
+            if (result.success) {
+                // Navigate immediately to the loading screen
+                navigation.navigate('Loading');
+            } else {
+                Alert.alert('Authentication failed', 'Please try again.');
+            }
+        } catch (error) {
+            console.error(error);
+            Alert.alert('An error occurred', 'Could not create wallet.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <SafeAreaView style={styles.container}>
+            <View style={styles.content}>
+                <Text style={styles.title}>Your Wallet</Text>
+                <Text style={styles.subtitle}>
+                    The easiest and most secure way to manage your crypto.
+                </Text>
+                <TouchableOpacity
+                    style={[styles.button, isLoading && styles.buttonDisabled]}
+                    onPress={handleCreateWallet}
+                    disabled={isLoading}>
+                    {isLoading ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text style={styles.buttonText}>Create Account</Text>
+                    )}
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
+    );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  header: {
-    marginBottom: 48,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 18,
-    textAlign: 'center',
-    color: '#6B7280',
-  },
-  mainContent: {
-    width: '100%',
-    maxWidth: 300,
-  },
-  welcomeText: {
-    fontSize: 20,
-    fontWeight: '600',
-    textAlign: 'center',
-    color: '#1F2937',
-    marginBottom: 32,
-  },
-  description: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#6B7280',
-    marginBottom: 32,
-    lineHeight: 24,
-  },
-  button: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginBottom: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    backgroundColor: '#9CA3AF',
-  },
-  buttonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontWeight: '600',
-    fontSize: 18,
-  },
-  infoText: {
-    fontSize: 14,
-    textAlign: 'center',
-    color: '#9CA3AF',
-    marginTop: 24,
-  },
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    content: {
+        width: '100%',
+        paddingHorizontal: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    title: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: '#111827',
+        textAlign: 'center',
+        marginBottom: 16,
+    },
+    subtitle: {
+        fontSize: 18,
+        color: '#6B7280',
+        textAlign: 'center',
+        marginBottom: 48,
+        maxWidth: 300,
+    },
+    button: {
+        backgroundColor: '#000',
+        paddingVertical: 18,
+        borderRadius: 12,
+        width: '100%',
+        maxWidth: 340,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    buttonDisabled: {
+        backgroundColor: '#9CA3AF',
+    },
+    buttonText: {
+        color: '#fff',
+        textAlign: 'center',
+        fontWeight: '600',
+        fontSize: 18,
+    },
 }); 
