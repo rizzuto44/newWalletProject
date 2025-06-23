@@ -49,6 +49,7 @@ const AddFundsScreen: React.FC = () => {
       });
       if (result.success) {
         setPaySheetVisible(false);
+        console.log('AddFundsScreen: Payment successful, navigating with shouldRefreshBalance=true');
         navigation.navigate('MainApp', { 
             screen: 'Home', 
             params: { shouldRefreshBalance: true } 
@@ -59,6 +60,7 @@ const AddFundsScreen: React.FC = () => {
     } else {
       Alert.alert('No hardware for authentication');
       setPaySheetVisible(false);
+      console.log('AddFundsScreen: No hardware, navigating with shouldRefreshBalance=true');
       navigation.navigate('MainApp', { 
           screen: 'Home', 
           params: { shouldRefreshBalance: true } 

@@ -55,11 +55,36 @@ const WalletScreen: React.FC = () => {
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
   const spinValue = React.useRef(new Animated.Value(0)).current;
 
+  // Create spin animation
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const startSpinAnimation = () => {
+    spinValue.setValue(0);
+    Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      })
+    ).start();
+  };
+
+  const stopSpinAnimation = () => {
+    spinValue.stopAnimation();
+    spinValue.setValue(0);
+  };
+
   // Load initial wallet data
   useFocusEffect(
     React.useCallback(() => {
       const loadWalletData = async () => {
         try {
+          console.log('WalletScreen: Loading wallet data');
+          console.log('WalletScreen: Route params:', route.params);
+          
           setIsLoading(true);
           
           // Get address from navigation params or storage
@@ -77,7 +102,9 @@ const WalletScreen: React.FC = () => {
             
             // Check if we should refresh balance (from AddFunds flow)
             if (route.params?.shouldRefreshBalance) {
+              console.log('WalletScreen: Should refresh balance - starting refresh');
               setIsBalanceLoading(true);
+              startSpinAnimation();
               const tokenBalance = await getTokenBalance(address);
               const tokenPrice = await getTokenPrice();
               const usdBalance = (parseFloat(tokenBalance) * tokenPrice).toFixed(2);
@@ -88,9 +115,12 @@ const WalletScreen: React.FC = () => {
                 usdBalance
               }));
               setIsBalanceLoading(false);
+              stopSpinAnimation();
             } else {
+              console.log('WalletScreen: Loading balance normally');
               // Load balance normally
               setIsBalanceLoading(true);
+              startSpinAnimation();
               const tokenBalance = await getTokenBalance(address);
               const tokenPrice = await getTokenPrice();
               const usdBalance = (parseFloat(tokenBalance) * tokenPrice).toFixed(2);
@@ -101,6 +131,7 @@ const WalletScreen: React.FC = () => {
                 usdBalance
               }));
               setIsBalanceLoading(false);
+              stopSpinAnimation();
             }
           }
         } catch (error) {
@@ -119,6 +150,8 @@ const WalletScreen: React.FC = () => {
     
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsRefreshing(true);
+    startSpinAnimation();
+    
     try {
       const tokenBalance = await getTokenBalance(walletData.address);
       const tokenPrice = await getTokenPrice();
@@ -133,13 +166,9 @@ const WalletScreen: React.FC = () => {
       console.error('Error refreshing balance:', error);
     } finally {
       setIsRefreshing(false);
+      stopSpinAnimation();
     }
   };
-
-  const spin = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
 
   const handleCopyAddress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
