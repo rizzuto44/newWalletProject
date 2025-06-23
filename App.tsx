@@ -16,6 +16,7 @@ import WalletScreen from './src/screens/WalletScreen';
 import { TransferScreen } from './src/screens/TransferScreen';
 import { getWalletAddress } from './src/services/WalletService';
 import AddFundsScreen from './src/screens/AddFundsScreen';
+import TabNavigator from './src/navigation/TabNavigator';
 
 const Stack = createStackNavigator();
 
@@ -35,7 +36,7 @@ function App() {
     const checkWallet = async () => {
       const address = await getWalletAddress();
       if (address) {
-        setInitialRoute('Wallet');
+        setInitialRoute('MainApp');
       } else {
         setInitialRoute('Onboarding');
       }
@@ -64,7 +65,7 @@ function App() {
             }}
           >
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-            <Stack.Screen name="Wallet" component={WalletScreen} />
+            <Stack.Screen name="MainApp" component={TabNavigator} />
             <Stack.Screen name="Transfer" component={TransferScreen} />
             <Stack.Screen name="AddFunds" component={AddFundsScreen} />
           </Stack.Navigator>

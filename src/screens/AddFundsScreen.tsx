@@ -10,13 +10,17 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as LocalAuthentication from 'expo-local-authentication';
 import MockApplePaySheet from '../components/MockApplePaySheet';
 
-// This should be updated with the main stack param list
-type AddFundsNavigationProp = StackNavigationProp<{ Dashboard: { newBalance: string } }>;
+type RootStackParamList = {
+    AddFunds: undefined;
+    Wallet: { newBalance: string };
+};
+
+type AddFundsNavigationProp = StackNavigationProp<RootStackParamList, 'AddFunds'>;
 
 const AddFundsScreen: React.FC = () => {
   const navigation = useNavigation<AddFundsNavigationProp>();
@@ -35,16 +39,15 @@ const AddFundsScreen: React.FC = () => {
       });
       if (result.success) {
         setPaySheetVisible(false);
-        // Navigate back to Dashboard and pass the new amount
-        // In a real app, you would add this to the existing balance
-        navigation.navigate('Dashboard', { newBalance: amount });
+        // In a real app, you would add this to the user's actual balance
+        navigation.navigate('Wallet', { newBalance: amount });
       } else {
         Alert.alert('Authentication failed');
       }
     } else {
       Alert.alert('No hardware for authentication');
       setPaySheetVisible(false);
-      navigation.navigate('Dashboard', { newBalance: amount });
+      navigation.navigate('Wallet', { newBalance: amount });
     }
   };
 
