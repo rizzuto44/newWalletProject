@@ -1,49 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import * as LocalAuthentication from 'expo-local-authentication';
-
-type RootStackParamList = {
-    Loading: undefined;
-};
-
-type OnboardingScreenNavigationProp = StackNavigationProp<
-    RootStackParamList,
-    'Loading'
->;
+import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, Alert } from 'react-native';
+import CreationLoadingModal from '../components/CreationLoadingModal';
 
 export const OnboardingScreen: React.FC = () => {
-    const navigation = useNavigation<OnboardingScreenNavigationProp>();
-    const [isLoading, setIsLoading] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
 
-    const handleCreateWallet = async () => {
-        setIsLoading(true);
-        try {
-            const hasHardware = await LocalAuthentication.hasHardwareAsync();
-            if (!hasHardware) {
-                Alert.alert("Unsupported", "Your device doesn't support biometric authentication.");
-                setIsLoading(false);
-                return;
-            }
-
-            const result = await LocalAuthentication.authenticateAsync({
-                promptMessage: 'Authenticate to create your wallet',
-            });
-
-            if (result.success) {
-                // Navigate immediately to the loading screen
-                navigation.navigate('Loading');
-            } else {
-                Alert.alert('Authentication failed', 'Please try again.');
-            }
-        } catch (error) {
-            console.error(error);
-            Alert.alert('An error occurred', 'Could not create wallet.');
-        } finally {
-            setIsLoading(false);
-        }
+    const handleCreateWallet = () => {
+        setIsCreating(true);
     };
+
+    const handleCloseModal = () => {
+        setIsCreating(false);
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -53,16 +21,15 @@ export const OnboardingScreen: React.FC = () => {
                     The easiest and most secure way to manage your crypto.
                 </Text>
                 <TouchableOpacity
-                    style={[styles.button, isLoading && styles.buttonDisabled]}
-                    onPress={handleCreateWallet}
-                    disabled={isLoading}>
-                    {isLoading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.buttonText}>Create Account</Text>
-                    )}
+                    style={styles.button}
+                    onPress={handleCreateWallet}>
+                    <Text style={styles.buttonText}>Create Account</Text>
                 </TouchableOpacity>
             </View>
+            <CreationLoadingModal 
+                isVisible={isCreating} 
+                onClose={handleCloseModal}
+            />
         </SafeAreaView>
     );
 };

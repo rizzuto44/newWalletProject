@@ -9,7 +9,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
@@ -19,20 +19,25 @@ import { getWalletAddress, clearWallet, getBalance } from '../services/WalletSer
 type RootStackParamList = {
   Onboarding: undefined;
   Transfer: undefined;
+  AddFunds: undefined;
+  Wallet: { newBalance?: string };
 };
 
-type DashboardScreenNavigationProp = StackNavigationProp<
+type WalletScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
   'Onboarding'
 >;
+
+type WalletScreenRouteProp = RouteProp<RootStackParamList, 'Wallet'>;
 
 interface WalletData {
   address: string;
   ethBalance: string;
 }
 
-const DashboardScreen: React.FC = () => {
-  const navigation = useNavigation<DashboardScreenNavigationProp>();
+const WalletScreen: React.FC = () => {
+  const navigation = useNavigation<WalletScreenNavigationProp>();
+  const route = useRoute<WalletScreenRouteProp>();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -43,12 +48,15 @@ const DashboardScreen: React.FC = () => {
         const address = await getWalletAddress();
         if (address) {
           const balance = await getBalance(address);
-          setWalletData({ address, ethBalance: balance || '0.0' });
+          const currentBalance = parseFloat(walletData?.ethBalance || balance || '0.0');
+          const newBalance = currentBalance + parseFloat(route.params?.newBalance || '0');
+          
+          setWalletData({ address, ethBalance: newBalance.toFixed(2) });
         }
         setIsLoading(false);
       };
       loadWalletData();
-    }, [])
+    }, [route.params?.newBalance])
   );
 
   const handleCopyAddress = async () => {
@@ -81,16 +89,8 @@ const DashboardScreen: React.FC = () => {
     navigation.navigate('Transfer');
   };
 
-  const handleAddFunds = async () => {
-    try {
-      // TODO: Implement Apple Pay on-ramp
-      // 1. Present Apple Pay sheet via react-native-payments
-      // 2. Call backend to mint mock USDT
-      // 3. Update balance display
-      Alert.alert('Coming Soon', 'Apple Pay integration will be available soon!');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add funds');
-    }
+  const handleAddFunds = () => {
+    navigation.navigate('AddFunds');
   };
 
   return (
@@ -223,4 +223,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DashboardScreen; 
+export default WalletScreen; 

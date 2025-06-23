@@ -7,17 +7,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { StatusBar, useColorScheme, ActivityIndicator, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
-import DashboardScreen from './src/screens/DashboardScreen';
-import LoadingScreen from './src/screens/LoadingScreen';
+import WalletScreen from './src/screens/WalletScreen';
 import { TransferScreen } from './src/screens/TransferScreen';
 import { getWalletAddress } from './src/services/WalletService';
+import AddFundsScreen from './src/screens/AddFundsScreen';
 
 const Stack = createStackNavigator();
+
+const navTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: '#121212', // Match the LoadingScreen background
+  },
+};
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -27,7 +35,7 @@ function App() {
     const checkWallet = async () => {
       const address = await getWalletAddress();
       if (address) {
-        setInitialRoute('Dashboard');
+        setInitialRoute('Wallet');
       } else {
         setInitialRoute('Onboarding');
       }
@@ -47,19 +55,18 @@ function App() {
   return (
     <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <NavigationContainer>
+        <NavigationContainer theme={navTheme}>
           <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
           <Stack.Navigator 
             initialRouteName={initialRoute}
             screenOptions={{
               headerShown: false,
-              animation: 'fade',
             }}
           >
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-            <Stack.Screen name="Loading" component={LoadingScreen} />
-            <Stack.Screen name="Dashboard" component={DashboardScreen} />
+            <Stack.Screen name="Wallet" component={WalletScreen} />
             <Stack.Screen name="Transfer" component={TransferScreen} />
+            <Stack.Screen name="AddFunds" component={AddFundsScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </GestureHandlerRootView>
