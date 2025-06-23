@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -53,12 +55,20 @@ const WalletScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const spinValue = React.useRef(new Animated.Value(0)).current;
+  const pullAnimValue = React.useRef(new Animated.Value(0)).current;
 
   // Create spin animation
   const spin = spinValue.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
+  });
+
+  // Create pull animation
+  const pullScale = pullAnimValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.8, 1.2],
   });
 
   const startSpinAnimation = () => {
@@ -76,6 +86,31 @@ const WalletScreen: React.FC = () => {
     spinValue.stopAnimation();
     spinValue.setValue(0);
   };
+
+  const onRefresh = React.useCallback(async () => {
+    if (!walletData?.address) return;
+    
+    setRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    startSpinAnimation();
+    
+    try {
+      const tokenBalance = await getTokenBalance(walletData.address);
+      const tokenPrice = await getTokenPrice();
+      const usdBalance = (parseFloat(tokenBalance) * tokenPrice).toFixed(2);
+      
+      setWalletData(prev => prev ? {
+        ...prev,
+        tokenBalance,
+        usdBalance
+      } : null);
+    } catch (error) {
+      console.error('Error refreshing balance:', error);
+    } finally {
+      setRefreshing(false);
+      stopSpinAnimation();
+    }
+  }, [walletData?.address]);
 
   // Load initial wallet data
   useFocusEffect(
@@ -145,31 +180,6 @@ const WalletScreen: React.FC = () => {
     }, [route.params?.shouldRefreshBalance])
   );
 
-  const handleRefresh = async () => {
-    if (!walletData?.address) return;
-    
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setIsRefreshing(true);
-    startSpinAnimation();
-    
-    try {
-      const tokenBalance = await getTokenBalance(walletData.address);
-      const tokenPrice = await getTokenPrice();
-      const usdBalance = (parseFloat(tokenBalance) * tokenPrice).toFixed(2);
-      
-      setWalletData(prev => prev ? {
-        ...prev,
-        tokenBalance,
-        usdBalance
-      } : null);
-    } catch (error) {
-      console.error('Error refreshing balance:', error);
-    } finally {
-      setIsRefreshing(false);
-      stopSpinAnimation();
-    }
-  };
-
   const handleCopyAddress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (walletData?.address) {
@@ -205,50 +215,65 @@ const WalletScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-            <CubeIcon />
-            <View style={{ marginLeft: 12 }}>
-                <Text style={styles.walletTitle}>Wallet</Text>
-                <View style={styles.addressContainer}>
-                    <Text style={styles.walletAddress}>
-                        {walletData?.address ? truncateAddress(walletData.address) : 'Loading...'}
-                    </Text>
-                    <TouchableOpacity onPress={handleCopyAddress} style={styles.iconButton}>
-                        <Feather name="copy" size={16} color="gray" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handleViewOnEtherscan} style={styles.iconButton}>
-                        <Feather name="globe" size={16} color="gray" />
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </View>
+      {/* Fixed Header */}
+      <View style={styles.header}>
+          <CubeIcon />
+          <View style={{ marginLeft: 12 }}>
+              <Text style={styles.walletTitle}>Wallet</Text>
+              <View style={styles.addressContainer}>
+                  <Text style={styles.walletAddress}>
+                      {walletData?.address ? truncateAddress(walletData.address) : 'Loading...'}
+                  </Text>
+                  <TouchableOpacity onPress={handleCopyAddress} style={styles.iconButton}>
+                      <Feather name="copy" size={16} color="gray" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleViewOnEtherscan} style={styles.iconButton}>
+                      <Feather name="globe" size={16} color="gray" />
+                  </TouchableOpacity>
+              </View>
+          </View>
+      </View>
 
-        {/* Tabs */}
-        <View style={styles.tabsContainer}>
-            <TouchableOpacity>
-                <Text style={[styles.tab, styles.activeTab]}>Dashboard</Text>
-            </TouchableOpacity>
-            <TouchableOpacity>
-                <Text style={styles.tab}>Coins</Text>
-            </TouchableOpacity>
-        </View>
+      {/* Fixed Tabs */}
+      <View style={styles.tabsContainer}>
+          <TouchableOpacity>
+              <Text style={[styles.tab, styles.activeTab]}>Dashboard</Text>
+          </TouchableOpacity>
+          <TouchableOpacity>
+              <Text style={styles.tab}>Coins</Text>
+          </TouchableOpacity>
+      </View>
 
+      {/* Scrollable Content with Pull-to-Refresh */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#666"
+            colors={["#666"]}
+            progressBackgroundColor="#fff"
+            progressViewOffset={10}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
         {/* Balance */}
         <View style={styles.balanceContainer}>
             <View style={styles.balanceHeader}>
                 <Text style={styles.balanceLabel}>Balance</Text>
                 <TouchableOpacity 
                     style={styles.refreshButton} 
-                    onPress={handleRefresh}
-                    disabled={isRefreshing || isBalanceLoading}
+                    onPress={onRefresh}
+                    disabled={refreshing || isBalanceLoading}
                 >
                     <Animated.View style={{ transform: [{ rotate: spin }] }}>
                         <Feather 
                             name="refresh-cw" 
                             size={20} 
-                            color={isRefreshing || isBalanceLoading ? "#999" : "#666"} 
+                            color={refreshing || isBalanceLoading ? "#999" : "#666"} 
                         />
                     </Animated.View>
                 </TouchableOpacity>
@@ -273,7 +298,7 @@ const WalletScreen: React.FC = () => {
                 <Text style={styles.actionButtonText}>Receive</Text>
             </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -283,14 +308,12 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
     },
-    content: {
-        paddingHorizontal: 20,
-        paddingTop: 20,
-    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 30,
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 20,
     },
     walletTitle: {
         fontSize: 16,
@@ -310,7 +333,10 @@ const styles = StyleSheet.create({
     },
     tabsContainer: {
         flexDirection: 'row',
-        marginBottom: 30,
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#fff',
     },
     tab: {
         fontSize: 18,
@@ -323,6 +349,14 @@ const styles = StyleSheet.create({
         borderBottomWidth: 2,
         borderBottomColor: '#000',
         paddingBottom: 4,
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 40, // Extra padding for pull-to-refresh
     },
     balanceContainer: {
         marginBottom: 30,
@@ -369,6 +403,18 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         marginLeft: 8,
+    },
+    refreshControlContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    refreshIcon: {
+        marginRight: 8,
+    },
+    refreshText: {
+        color: '#666',
+        fontSize: 14,
     },
 });
 

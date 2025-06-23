@@ -29,7 +29,8 @@ const CreationLoadingModal: React.FC<CreationLoadingModalProps> = ({ isVisible, 
     const [phase, setPhase] = useState<LoadingPhase>('idle');
     const [walletAddress, setWalletAddress] = useState<string>('');
     const startTime = useRef<number>(0);
-    const minEscapeTime = 5000; // 5 seconds minimum for "Escaping the matrix..."
+    const minTotalTime = 6000; // 6 seconds total minimum
+    const minAuthenticatingTime = 2000; // 2 seconds minimum for "Authenticating..."
 
     useEffect(() => {
         if (isVisible) {
@@ -42,6 +43,9 @@ const CreationLoadingModal: React.FC<CreationLoadingModalProps> = ({ isVisible, 
         startTime.current = Date.now();
 
         try {
+            // Ensure minimum time for "Authenticating..." message
+            const authStartTime = Date.now();
+            
             // Authenticate with Face ID
             const authResult = await LocalAuthentication.authenticateAsync({
                 promptMessage: 'Authenticate to create your wallet',
@@ -54,15 +58,23 @@ const CreationLoadingModal: React.FC<CreationLoadingModalProps> = ({ isVisible, 
                 return;
             }
 
+            // Ensure minimum time for "Authenticating..." message
+            const authElapsed = Date.now() - authStartTime;
+            const remainingAuthTime = Math.max(0, minAuthenticatingTime - authElapsed);
+            
+            if (remainingAuthTime > 0) {
+                await new Promise(resolve => setTimeout(resolve, remainingAuthTime));
+            }
+
             setPhase('escaping');
 
             // Create wallet
             const wallet = await createWallet();
             setWalletAddress(wallet.address);
 
-            // Ensure minimum time for "Escaping the matrix..." message
-            const elapsed = Date.now() - startTime.current;
-            const remainingTime = Math.max(0, minEscapeTime - elapsed);
+            // Calculate remaining time to meet total minimum
+            const totalElapsed = Date.now() - startTime.current;
+            const remainingTime = Math.max(0, minTotalTime - totalElapsed);
             
             if (remainingTime > 0) {
                 await new Promise(resolve => setTimeout(resolve, remainingTime));
