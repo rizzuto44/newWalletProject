@@ -17,6 +17,7 @@ import { TransferScreen } from './src/screens/TransferScreen';
 import { getWalletAddress } from './src/services/WalletService';
 import AddFundsScreen from './src/screens/AddFundsScreen';
 import TabNavigator from './src/navigation/TabNavigator';
+import LoginScreen from './src/screens/LoginScreen';
 
 const Stack = createStackNavigator();
 
@@ -31,17 +32,19 @@ const navTheme = {
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
   const [initialRoute, setInitialRoute] = useState<string | null>(null);
+  const [hasWallet, setHasWallet] = useState<boolean | null>(null);
 
   useEffect(() => {
     const checkWallet = async () => {
       const address = await getWalletAddress();
       if (address) {
-        setInitialRoute('MainApp');
+        setHasWallet(true);
+        setInitialRoute('Login');
       } else {
+        setHasWallet(false);
         setInitialRoute('Onboarding');
       }
     };
-
     checkWallet();
   }, []);
 
@@ -65,6 +68,7 @@ function App() {
             }}
           >
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="MainApp" component={TabNavigator} />
             <Stack.Screen name="Transfer" component={TransferScreen} />
             <Stack.Screen name="AddFunds" component={AddFundsScreen} />

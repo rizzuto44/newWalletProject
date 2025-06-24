@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import CreationLoadingModal from '../components/CreationLoadingModal';
+import CubeIcon from '../components/CubeIcon';
 
 export const OnboardingScreen: React.FC = () => {
     const [isCreating, setIsCreating] = useState(false);
@@ -18,10 +19,7 @@ export const OnboardingScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.content}>
-                <Text style={styles.title}>Your Wallet</Text>
-                <Text style={styles.subtitle}>
-                    The easiest and most secure way to manage your crypto.
-                </Text>
+                <CubeIcon />
                 <TouchableOpacity
                     style={styles.button}
                     onPress={handleCreateWallet}>
@@ -49,28 +47,17 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    title: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#111827',
-        textAlign: 'center',
-        marginBottom: 16,
-    },
-    subtitle: {
-        fontSize: 18,
-        color: '#6B7280',
-        textAlign: 'center',
-        marginBottom: 48,
-        maxWidth: 300,
-    },
     button: {
         backgroundColor: '#000',
-        paddingVertical: 18,
+        paddingVertical: 12,
+        paddingHorizontal: 28,
         borderRadius: 12,
-        width: '100%',
-        maxWidth: 340,
+        marginTop: 32,
+        alignSelf: 'center',
         justifyContent: 'center',
         alignItems: 'center',
+        minWidth: 0,
+        minHeight: 0,
     },
     buttonDisabled: {
         backgroundColor: '#9CA3AF',
