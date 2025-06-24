@@ -73,6 +73,16 @@ const AddFundsScreen: React.FC = () => {
     navigation.goBack();
   };
 
+  const formatAmount = (value: string) => {
+    // Remove non-numeric except dot
+    const cleaned = value.replace(/[^\d.]/g, '');
+    if (!cleaned) return '';
+    // Split integer and decimal
+    const [int, dec] = cleaned.split('.');
+    const intFormatted = parseInt(int, 10).toLocaleString('en-US');
+    return dec !== undefined ? `${intFormatted}.${dec}` : intFormatted;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -89,8 +99,8 @@ const AddFundsScreen: React.FC = () => {
             <Text style={styles.currencySymbol}>$</Text>
             <TextInput
               style={styles.input}
-              value={amount}
-              onChangeText={setAmount}
+              value={formatAmount(amount)}
+              onChangeText={text => setAmount(text.replace(/[^\d.]/g, ''))}
               keyboardType="numeric"
               placeholder="0.00"
               placeholderTextColor="#6c757d"
