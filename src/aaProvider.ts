@@ -38,11 +38,14 @@ export class AAProvider {
       transport: http(RPC_URL),
     });
 
+    // Use Pimlico bundler instead of deprecated Stackup
+    const bundlerUrl = BUNDLER_RPC || 'https://api.pimlico.io/v2/sepolia/rpc';
+
     const config: SmartAccountClientConfig = {
       chain: this.chain,
-      transport: http(BUNDLER_RPC),
+      transport: http(bundlerUrl),
       entryPoint: ENTRYPOINT || getDefaultEntryPointAddress(this.chain),
-      bundlerUrl: BUNDLER_RPC,
+      bundlerUrl: bundlerUrl,
       paymasterUrl: PAYMASTER_URL,
     };
 

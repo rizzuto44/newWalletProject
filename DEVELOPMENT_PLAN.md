@@ -223,13 +223,13 @@ forge script scripts/deploy_sepolia.s.sol --rpc-url $RPC_URL --broadcast --verif
 #### 2.1 Package Installation & Validation
 **Before installing, check if packages exist:**
 ```bash
-npm list @stackup/account-kit
+npm list @alchemy/aa-core
 npm list viem
 ```
 
 **Install only if missing:**
 ```bash
-npm install @stackup/account-kit viem
+npm install @alchemy/aa-core viem
 ```
 
 #### 2.2 AA Provider Setup
@@ -237,10 +237,10 @@ npm install @stackup/account-kit viem
 
 **Implementation:**
 ```typescript
-import { createSmartAccountClient } from '@stackup/account-kit';
+import { createSmartAccountClient } from '@alchemy/aa-core';
 
 export const aa = createSmartAccountClient({
-  bundlerRpcUrl: process.env.BUNDLER_RPC,
+  bundlerRpcUrl: process.env.BUNDLER_RPC || 'https://api.pimlico.io/v2/sepolia/rpc',
   entryPoint: process.env.ENTRYPOINT,
   paymasterUrl: process.env.PAYMASTER_URL,
 });
@@ -304,7 +304,7 @@ ENTRYPOINT=0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
 USDT0_ADDRESS=0x...
 FACTORY_ADDRESS=0x...
 PAYMASTER_URL=https://api.pimlico.io/v2/sepolia/paymaster
-BUNDLER_RPC=https://api.stackup.sh/v1/node/<key>
+BUNDLER_RPC=https://api.pimlico.io/v2/sepolia/rpc
 ```
 
 #### 3.2 Type Definitions
@@ -352,15 +352,13 @@ forge test --fork-url $RPC_URL
 ### Step 5: Infrastructure Setup
 **Status**: ⏳ Pending
 
-#### 5.1 Stackup Project
-- Create Stackup project
-- Get bundler endpoint
-- Store in environment variables
-
-#### 5.2 Pimlico Integration
-- Set up Pimlico paymaster
-- Configure token payments
+#### 5.1 Pimlico Integration
+- Set up Pimlico bundler endpoint
+- Configure paymaster service
 - Test integration
+
+#### 5.2 Optional Self-hosted Bundler
+- Deploy Pimlico bundler if > 12 TPS needed
 
 ### Step 6: Documentation
 **Status**: ⏳ Pending
@@ -396,11 +394,20 @@ forge test --fork-url $RPC_URL
 ### Smart Contract Architecture
 **Decision Point:** Whether to use existing AA frameworks or custom implementation
 **Alternatives:**
-1. Use Stackup's LightAccount (recommended in PRD)
+1. Use Alchemy AA Core (recommended)
 2. Use Biconomy's Account Abstraction
 3. Custom implementation
 
-**Recommendation:** Follow PRD recommendation for Stackup LightAccount.
+**Recommendation:** Use Alchemy AA Core for robust AA features.
+
+### Bundler Selection
+**Decision Point:** Which bundler to use for transaction bundling
+**Alternatives:**
+1. Pimlico bundler (recommended - widely used, reliable)
+2. Alchemy bundler
+3. Self-hosted bundler
+
+**Recommendation:** Use Pimlico bundler for production, self-hosted for high TPS needs.
 
 ### Testing Strategy
 **Decision Point:** Testing scope and tools
@@ -454,4 +461,5 @@ forge test --fork-url $RPC_URL
 - Always validate existing packages before installing new ones
 - Test each step thoroughly before moving to the next
 - Document any deviations from the PRD
-- Keep the implementation focused on the core requirements 
+- Keep the implementation focused on the core requirements
+- Updated to use Pimlico bundler instead of deprecated Stackup 
