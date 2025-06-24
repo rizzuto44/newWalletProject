@@ -202,13 +202,16 @@ const WalletScreen: React.FC = () => {
     }
   };
 
-  const handleSend = () => navigation.navigate('Transfer');
+  const handleSend = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate('Transfer');
+  };
   const handleAddFunds = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate('AddFunds');
   };
   const handleReceive = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (walletData?.address) {
       Clipboard.setStringAsync(walletData.address);
       Alert.alert('Copied!', 'Wallet address copied to clipboard');
@@ -327,22 +330,27 @@ const WalletScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.coinsContainer}>
-            <View style={styles.coinRow}>
-              <Image
-                source={require('../assets/usdt0.png')}
-                style={styles.coinIcon}
-                resizeMode="contain"
-              />
-              <View style={styles.coinInfo}>
-                <Text style={styles.coinName}>USDT0</Text>
-                <Text style={styles.coinSymbol}>USDT0</Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+            >
+              <View style={styles.coinRow}>
+                <Image
+                  source={require('../assets/usdt0.png')}
+                  style={styles.coinIcon}
+                  resizeMode="contain"
+                />
+                <View style={styles.coinInfo}>
+                  <Text style={styles.coinName}>USDT0</Text>
+                  <Text style={styles.coinSymbol}>USDT0</Text>
+                </View>
+                <View style={styles.coinBalanceContainer}>
+                  <Text style={styles.coinBalance}>
+                    ${walletData ? formatUsd(walletData.tokenBalance) : '0.00'}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.coinBalanceContainer}>
-                <Text style={styles.coinBalance}>
-                  ${walletData ? formatUsd(walletData.tokenBalance) : '0.00'}
-                </Text>
-              </View>
-            </View>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       )}

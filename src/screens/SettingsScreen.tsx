@@ -5,6 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { clearWallet } from '../services/WalletService';
+import * as LocalAuthentication from 'expo-local-authentication';
 
 type RootStackParamList = {
     Onboarding: undefined;
@@ -30,6 +31,15 @@ const SettingsScreen = () => {
                     style: "destructive",
                     onPress: async () => {
                         try {
+                            // Prompt for Face ID before resetting
+                            const result = await LocalAuthentication.authenticateAsync({
+                                promptMessage: 'Authenticate to reset your wallet',
+                                fallbackLabel: 'Enter Passcode',
+                            });
+                            if (!result.success) {
+                                Alert.alert('Authentication Failed', 'Face ID authentication was not successful.');
+                                return;
+                            }
                             await clearWallet();
                             navigation.reset({
                                 index: 0,
@@ -52,7 +62,7 @@ const SettingsScreen = () => {
         </View>
         <View style={styles.content}>
             <TouchableOpacity style={styles.button} onPress={handleResetWallet}>
-                <Feather name="trash-2" size={20} color="#E53E3E" />
+                <Feather name="trash-2" size={20} color="#fff" />
                 <Text style={styles.buttonText}>Reset Wallet</Text>
             </TouchableOpacity>
         </View>
@@ -81,8 +91,8 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     button: {
-        backgroundColor: '#FFF5F5',
-        borderColor: '#FED7D7',
+        backgroundColor: '#000',
+        borderColor: '#000',
         borderWidth: 1,
         borderRadius: 12,
         padding: 15,
@@ -91,7 +101,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center'
     },
     buttonText: {
-        color: '#E53E3E',
+        color: '#fff',
         fontSize: 16,
         fontWeight: '600',
         marginLeft: 10

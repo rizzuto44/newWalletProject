@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 
 import WalletScreen from '../screens/WalletScreen';
 import EarnScreen from '../screens/EarnScreen';
@@ -62,6 +63,11 @@ const TabNavigator = () => {
       <Tab.Screen 
         name="Settings" 
         component={SettingsScreen} 
+        listeners={{
+          tabPress: (e) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          },
+        }}
       />
     </Tab.Navigator>
   );
