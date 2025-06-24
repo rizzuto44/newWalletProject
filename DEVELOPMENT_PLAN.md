@@ -129,3 +129,329 @@ const receipt = await tx.wait();
 - Mock USDT will be used for testing
 - Face ID will be required for all sensitive operations
 - Apple Pay integration requires sandbox testing on physical device 
+
+# Phase 2 Implementation Plan - Step by Step
+
+## 🎯 Overview
+This document outlines the step-by-step implementation of Phase 2: Ethereum Sepolia Wallet MVP with Account Abstraction (AA) and Smart Contract Accounts (SCA).
+
+## 📋 Pre-Implementation Checklist
+
+### Current Package Analysis
+Based on `package.json`, we already have:
+- ✅ `ethers` (^5.7.2) - Blockchain interactions
+- ✅ `expo-secure-store` - Secure storage for keys
+- ✅ `expo-local-authentication` - Face ID integration
+- ✅ `@react-native-async-storage/async-storage` - Data persistence
+- ✅ `react-native-get-random-values` - Crypto randomness
+- ✅ `buffer` - Buffer polyfills
+
+### New Packages Required
+- ❌ `@stackup/account-kit` - Smart account client
+- ❌ `viem` - Enhanced Ethereum client (optional, can use ethers)
+
+## 🚀 Implementation Sequence
+
+### Step 0: Project Setup & Hygiene
+**Status**: ⏳ Pending
+
+1. **Create Phase 2 Branch**
+   ```bash
+   git checkout -b phase-2
+   ```
+
+2. **Environment Configuration**
+   - Create `.env.example` with AA variables
+   - Ensure `.env` is git-ignored
+   - Add required environment variables
+
+3. **React Native Version Check**
+   - Current: 0.79.4
+   - Required: ≥ 0.80
+   - Action: Bump version if needed
+
+4. **Package Version Freezing**
+   - Lock exact versions of new AA libraries
+   - Update package.json with precise versions
+
+### Step 1: Smart Contract Development
+**Status**: ⏳ Pending
+
+#### 1.1 Contract Creation
+**Files to create:**
+- `contracts/MockUSDT.sol`
+- `contracts/LightAccountFactory.sol` 
+- `contracts/MyErc20Paymaster.sol`
+
+**Key Requirements:**
+- MockUSDT: 18-decimals ERC-20 with owner minting
+- LightAccountFactory: Kernel v0.2 factory
+- MyErc20Paymaster: Forked Pimlico ERC-20 Paymaster
+- EntryPoint: `0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789`
+
+#### 1.2 Foundry Setup
+**Files to create:**
+- `foundry.toml` (if not exists)
+- `scripts/deploy_sepolia.s.sol`
+
+**Deployment Script Requirements:**
+- Deploy MockUSDT
+- Deploy LightAccountFactory with EntryPoint
+- Deploy MyErc20Paymaster with USDT and Chainlink oracle
+- Add stake and deposit to paymaster
+- Save addresses to `deploys/sepolia.json`
+
+#### 1.3 Testing
+**Test Files:**
+- `test/Paymaster.t.sol`
+- `test/Factory.t.sol`
+
+**Test Requirements:**
+- Paymaster debits USDT correctly
+- Paymaster refunds on revert
+- Factory counterfactual address matches JS helper
+
+#### 1.4 Deployment
+**Commands:**
+```bash
+forge script scripts/deploy_sepolia.s.sol --rpc-url $RPC_URL --broadcast --verify
+```
+
+### Step 2: Mobile App Integration
+**Status**: ⏳ Pending
+
+#### 2.1 Package Installation & Validation
+**Before installing, check if packages exist:**
+```bash
+npm list @stackup/account-kit
+npm list viem
+```
+
+**Install only if missing:**
+```bash
+npm install @stackup/account-kit viem
+```
+
+#### 2.2 AA Provider Setup
+**File to create:** `src/aaProvider.ts`
+
+**Implementation:**
+```typescript
+import { createSmartAccountClient } from '@stackup/account-kit';
+
+export const aa = createSmartAccountClient({
+  bundlerRpcUrl: process.env.BUNDLER_RPC,
+  entryPoint: process.env.ENTRYPOINT,
+  paymasterUrl: process.env.PAYMASTER_URL,
+});
+```
+
+#### 2.3 Onboarding Enhancement
+**File to update:** `src/screens/OnboardingScreen.tsx`
+
+**Changes required:**
+- Import AA provider
+- Create SCA from EOA after Face ID
+- Persist SCA address in AsyncStorage
+- Update UI to show SCA address
+
+#### 2.4 Wallet Context Update
+**File to update:** `src/services/WalletService.ts`
+
+**Changes required:**
+- Replace `ethers.Wallet` with `SmartAccount`
+- Add `sendTransaction` helper
+- Add `estimatePaymasterFee` helper
+- Update balance fetching for SCA
+
+#### 2.5 Transfer Screen Enhancement
+**File to update:** `src/screens/TransferScreen.tsx`
+
+**Changes required:**
+- Use SCA for USDT₀ transfers
+- Integrate paymaster fee estimation
+- Handle gas-in-token payments
+- Update transaction flow
+
+#### 2.6 Fee Banner Component
+**File to create:** `src/components/FeeBanner.tsx`
+
+**Implementation:**
+- Display estimated USDT₀ fees
+- Show fee breakdown
+- Handle loading states
+
+#### 2.7 Safety & UX Polish
+**Files to update:**
+- `src/screens/TransferScreen.tsx`
+- `src/components/CreationLoadingModal.tsx`
+
+**Requirements:**
+- Disable Send button until fee & balance fetched
+- Handle insufficient token payment errors
+- Show user-friendly error messages
+
+### Step 3: Environment Configuration
+**Status**: ⏳ Pending
+
+#### 3.1 Environment Variables
+**File to update:** `.env.example`
+
+**Required variables:**
+```env
+RPC_URL=https://eth-sepolia.g.alchemy.com/v2/<key>
+ENTRYPOINT=0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+USDT0_ADDRESS=0x...
+FACTORY_ADDRESS=0x...
+PAYMASTER_URL=https://api.pimlico.io/v2/sepolia/paymaster
+BUNDLER_RPC=https://api.stackup.sh/v1/node/<key>
+```
+
+#### 3.2 Type Definitions
+**File to update:** `env.d.ts`
+
+**Add AA-specific types:**
+```typescript
+declare module '@env' {
+  export const RPC_URL: string;
+  export const ENTRYPOINT: string;
+  export const USDT0_ADDRESS: string;
+  export const FACTORY_ADDRESS: string;
+  export const PAYMASTER_URL: string;
+  export const BUNDLER_RPC: string;
+}
+```
+
+### Step 4: Testing & Quality Assurance
+**Status**: ⏳ Pending
+
+#### 4.1 Smart Contract Testing
+**Commands:**
+```bash
+forge test
+forge test --fork-url $RPC_URL
+```
+
+#### 4.2 Mobile App Testing
+**Files to create:**
+- `__tests__/aaProvider.test.ts`
+- `__tests__/walletService.test.ts`
+
+**Test Requirements:**
+- Face ID integration
+- Keychain storage
+- SCA persistence
+- Transaction execution
+
+#### 4.3 End-to-End Testing
+**Setup Detox for E2E testing:**
+- Create SCA
+- On-ramp USDT₀
+- Send USDT₀ with gas-in-token
+
+### Step 5: Infrastructure Setup
+**Status**: ⏳ Pending
+
+#### 5.1 Stackup Project
+- Create Stackup project
+- Get bundler endpoint
+- Store in environment variables
+
+#### 5.2 Pimlico Integration
+- Set up Pimlico paymaster
+- Configure token payments
+- Test integration
+
+### Step 6: Documentation
+**Status**: ⏳ Pending
+
+#### 6.1 README Updates
+**File to update:** `README.md`
+
+**Add sections:**
+- Phase 2 setup instructions
+- Environment configuration
+- Deployment guide
+- Troubleshooting tips
+
+#### 6.2 API Documentation
+**File to create:** `docs/API.md`
+
+**Document:**
+- Smart contract interfaces
+- Mobile app APIs
+- Integration examples
+
+## 🔧 Decision Points & Alternatives
+
+### Package Management
+**Decision Point:** Whether to use `viem` alongside `ethers`
+**Alternatives:**
+1. Use only `ethers` (already installed)
+2. Use only `viem` (newer, more modern)
+3. Use both (ethers for existing code, viem for new AA features)
+
+**Recommendation:** Start with `ethers` only, add `viem` only if needed for specific AA features.
+
+### Smart Contract Architecture
+**Decision Point:** Whether to use existing AA frameworks or custom implementation
+**Alternatives:**
+1. Use Stackup's LightAccount (recommended in PRD)
+2. Use Biconomy's Account Abstraction
+3. Custom implementation
+
+**Recommendation:** Follow PRD recommendation for Stackup LightAccount.
+
+### Testing Strategy
+**Decision Point:** Testing scope and tools
+**Alternatives:**
+1. Unit tests only
+2. Unit + integration tests
+3. Unit + integration + E2E tests
+
+**Recommendation:** Start with unit tests, add integration tests as needed.
+
+## ⚠️ Risk Mitigation
+
+### Technical Risks
+1. **Package Compatibility**: Test all new packages with existing setup
+2. **Smart Contract Security**: Thorough testing and auditing
+3. **Gas Optimization**: Monitor and optimize gas usage
+
+### Development Risks
+1. **Scope Creep**: Stick to PRD requirements
+2. **Timeline**: Break down into smaller, manageable tasks
+3. **Dependencies**: Validate all external dependencies
+
+## 📊 Success Metrics
+
+### Technical Metrics
+- [ ] All contracts deployed and verified on Sepolia
+- [ ] CI/CD pipeline passing
+- [ ] No runtime errors in development
+- [ ] All tests passing
+
+### User Experience Metrics
+- [ ] SCA creation works seamlessly
+- [ ] Gasless transactions execute successfully
+- [ ] Fee estimation is accurate
+- [ ] Error handling is user-friendly
+
+### Business Metrics
+- [ ] End-to-end flow works: create → on-ramp → transfer
+- [ ] Gas fees are properly deducted in USDT₀
+- [ ] User can complete transactions without holding ETH
+
+## 🎯 Next Steps
+
+1. **Immediate**: Start with Step 0 (Project Setup)
+2. **Short-term**: Focus on Smart Contract Development (Step 1)
+3. **Medium-term**: Mobile App Integration (Step 2)
+4. **Long-term**: Testing and Documentation (Steps 4-6)
+
+## 📝 Notes
+
+- Always validate existing packages before installing new ones
+- Test each step thoroughly before moving to the next
+- Document any deviations from the PRD
+- Keep the implementation focused on the core requirements 
