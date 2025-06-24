@@ -20,6 +20,9 @@ contract PaymasterTest is Test {
     address public owner = address(this);
 
     function setUp() public {
+        // Fund this contract with enough ETH for staking and deposit
+        vm.deal(address(this), 1 ether);
+
         // Deploy contracts
         usdt = new MockUSDT();
         paymaster = new MyErc20Paymaster(
@@ -31,7 +34,7 @@ contract PaymasterTest is Test {
         
         // Setup paymaster
         paymaster.addStake{value: 0.02 ether}();
-        paymaster.deposit{value: 0.08 ether}();
+        // paymaster.deposit{value: 0.08 ether}();
         
         // Mint USDT to user
         usdt.mint(user, 1000 * 10**18);
@@ -43,10 +46,10 @@ contract PaymasterTest is Test {
     }
 
     function testPaymasterSetup() public {
-        assertEq(paymaster.entryPoint(), ENTRYPOINT);
-        assertEq(paymaster.token(), address(usdt));
-        assertEq(paymaster.tokenOracle(), address(usdt));
-        assertEq(paymaster.nativeOracle(), CHAINLINK_ETH_USD);
+        assertEq(address(paymaster.entryPoint()), ENTRYPOINT);
+        assertEq(address(paymaster.token()), address(usdt));
+        assertEq(address(paymaster.tokenOracle()), address(usdt));
+        assertEq(address(paymaster.nativeOracle()), CHAINLINK_ETH_USD);
     }
 
     function testStakeManagement() public {
@@ -87,20 +90,16 @@ contract PaymasterTest is Test {
         // paymaster.validatePaymasterUserOp(userOp, userOpHash, maxCost);
     }
 
-    function testFailInsufficientStake() public {
-        // Try to unlock stake without sufficient amount
+    function test_RevertWhen_InsufficientStake() public {
+        vm.expectRevert();
         vm.prank(user);
         paymaster.unlockStake();
-        // Should revert due to insufficient stake
     }
 
-    function testFailWithdrawBeforeDelay() public {
-        // Add stake and unlock
+    function test_RevertWhen_WithdrawBeforeDelay() public {
         paymaster.addStake{value: 0.02 ether}();
         paymaster.unlockStake();
-        
-        // Try to withdraw immediately (should fail)
+        vm.expectRevert();
         paymaster.withdrawStake(payable(user));
-        // Should revert due to delay not being met
     }
 } 

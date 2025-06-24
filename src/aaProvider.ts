@@ -13,14 +13,7 @@ import {
   type Transport 
 } from 'viem';
 import { sepolia } from 'viem/chains';
-import { 
-  RPC_URL, 
-  ENTRYPOINT, 
-  USDT0_ADDRESS, 
-  FACTORY_ADDRESS, 
-  PAYMASTER_URL, 
-  BUNDLER_RPC 
-} from '@env';
+import { CONTRACTS, RPC_URLS } from './config/contracts';
 
 /**
  * @title AAProvider
@@ -35,18 +28,18 @@ export class AAProvider {
     this.chain = sepolia;
     this.publicClient = createPublicClient({
       chain: this.chain,
-      transport: http(RPC_URL),
+      transport: http(RPC_URLS.SEPOLIA),
     });
 
     // Use Pimlico bundler instead of deprecated Stackup
-    const bundlerUrl = BUNDLER_RPC || 'https://api.pimlico.io/v2/sepolia/rpc';
+    const bundlerUrl = RPC_URLS.PIMLICO_BUNDLER;
 
     const config: SmartAccountClientConfig = {
       chain: this.chain,
       transport: http(bundlerUrl),
-      entryPoint: ENTRYPOINT || getDefaultEntryPointAddress(this.chain),
+      entryPoint: CONTRACTS.ENTRYPOINT,
       bundlerUrl: bundlerUrl,
-      paymasterUrl: PAYMASTER_URL,
+      paymasterUrl: RPC_URLS.PIMLICO_PAYMASTER,
     };
 
     this.client = createSmartAccountClient(config);
@@ -62,9 +55,9 @@ export class AAProvider {
     try {
       const smartAccountClient = await this.client.createSmartAccount({
         signer,
-        factoryAddress: FACTORY_ADDRESS,
+        factoryAddress: CONTRACTS.LIGHT_ACCOUNT_FACTORY,
         gasManagerConfig: {
-          policyId: PAYMASTER_URL, // Using paymaster URL as policy ID for now
+          policyId: RPC_URLS.PIMLICO_PAYMASTER, // Using paymaster URL as policy ID for now
         },
       });
 
@@ -83,7 +76,7 @@ export class AAProvider {
   async getSmartAccountAddress(owner: string): Promise<string> {
     try {
       const address = await this.client.getSmartAccountAddress({
-        factoryAddress: FACTORY_ADDRESS,
+        factoryAddress: CONTRACTS.LIGHT_ACCOUNT_FACTORY,
         owner,
       });
       return address;
@@ -137,7 +130,7 @@ export class AAProvider {
       const transferData = `0xa9059cbb${to.slice(2).padStart(64, '0')}${amount.toString(16).padStart(64, '0')}`;
       
       const { hash } = await smartAccountClient.sendTransaction({
-        to: USDT0_ADDRESS,
+        to: CONTRACTS.USDT,
         data: transferData as `0x${string}`,
         value: 0n,
       });
@@ -220,7 +213,7 @@ export class AAProvider {
       const balanceData = `0x70a08231${smartAccountAddress.slice(2).padStart(64, '0')}`;
       
       const balance = await this.publicClient.call({
-        to: USDT0_ADDRESS,
+        to: CONTRACTS.USDT,
         data: balanceData as `0x${string}`,
       });
       

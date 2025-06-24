@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "./interfaces/IEntryPoint.sol";
 
 /**
  * @title MyErc20Paymaster
@@ -39,7 +40,8 @@ contract MyErc20Paymaster is Ownable, ReentrancyGuard {
         address _token,
         address _tokenOracle,
         address _nativeOracle
-    ) Ownable(msg.sender) {
+    ) Ownable() {
+        _transferOwnership(msg.sender);
         entryPoint = IEntryPoint(_entryPoint);
         token = IERC20(_token);
         tokenOracle = AggregatorV3Interface(_tokenOracle);
@@ -184,15 +186,6 @@ contract MyErc20Paymaster is Ownable, ReentrancyGuard {
 }
 
 /**
- * @title IEntryPoint
- * @dev Interface for the EntryPoint contract
- */
-interface IEntryPoint {
-    function depositTo(address account) external payable;
-    function withdrawTo(address payable withdrawAddress, uint256 amount) external;
-}
-
-/**
  * @title AggregatorV3Interface
  * @dev Chainlink price feed interface
  */
@@ -204,24 +197,6 @@ interface AggregatorV3Interface {
         uint256 updatedAt,
         uint80 answeredInRound
     );
-}
-
-/**
- * @title UserOperation
- * @dev Structure for ERC-4337 UserOperation
- */
-struct UserOperation {
-    address sender;
-    uint256 nonce;
-    bytes initCode;
-    bytes callData;
-    uint256 callGasLimit;
-    uint256 verificationGasLimit;
-    uint256 preVerificationGas;
-    uint256 maxFeePerGas;
-    uint256 maxPriorityFeePerGas;
-    bytes paymasterAndData;
-    bytes signature;
 }
 
 /**

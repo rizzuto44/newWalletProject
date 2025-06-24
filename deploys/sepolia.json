@@ -1,0 +1,11 @@
+{
+  "deployments": {
+    "usdt": "0x425f8026d423cc234760BB153997Bf05C26911b5",
+    "factory": "0x87E0fca8F13A7C66CfaA3489f4a9203eD734da3A",
+    "paymaster": "0xE3c13Bd30b453E7867cC74B3D6edDa23294e4b44"
+  },
+  "constants": {
+    "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+    "chainlinkEthUsd": "0x694AA1769357215DE4FAC081bf1f309aDC325306"
+  }
+} 

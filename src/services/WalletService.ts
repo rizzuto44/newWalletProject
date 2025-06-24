@@ -4,15 +4,15 @@ import { ethers } from 'ethers';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { INFURA_PROJECT_ID } from '@env';
+import { CONTRACTS, RPC_URLS } from '../config/contracts';
 
 // Polyfill for Buffer
 global.Buffer = Buffer;
 
 const PRIVATE_KEY_STORAGE_KEY = 'privateKey';
 const WALLET_ADDRESS_STORAGE_KEY = 'walletAddress';
-const SEPOLIA_RPC_URL = `https://sepolia.infura.io/v3/${INFURA_PROJECT_ID}`;
 
-const provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC_URL);
+const provider = new ethers.providers.JsonRpcProvider(RPC_URLS.SEPOLIA);
 
 export const createWallet = async (): Promise<ethers.Wallet> => {
     try {
@@ -83,8 +83,7 @@ const erc20Abi = [
     "function decimals() view returns (uint8)"
 ];
 
-const tokenContractAddress = '0xa8Aeb9c64B72aFfAB318f06229052AF517CA2D50';
-const tokenContract = new ethers.Contract(tokenContractAddress, erc20Abi, provider);
+const tokenContract = new ethers.Contract(CONTRACTS.USDT, erc20Abi, provider);
 
 export const getTokenBalance = async (address: string): Promise<string> => {
     if (!INFURA_PROJECT_ID || INFURA_PROJECT_ID === 'YOUR_INFURA_PROJECT_ID_HERE') {

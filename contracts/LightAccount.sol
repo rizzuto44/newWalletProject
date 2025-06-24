@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interfaces/IEntryPoint.sol";
 
 /**
  * @title LightAccount
@@ -23,21 +24,18 @@ contract LightAccount is Initializable, Ownable, UUPSUpgradeable {
         _;
     }
 
-    constructor(IEntryPoint _entryPoint) {
+    constructor(IEntryPoint _entryPoint) Ownable() {
         entryPoint = _entryPoint;
         _disableInitializers();
+        _transferOwnership(msg.sender);
     }
 
     /**
      * @dev Initialize the account with an owner
      */
     function initialize(address anOwner) public virtual initializer {
-        _initialize(anOwner);
-    }
-
-    function _initialize(address anOwner) internal virtual {
-        owner = anOwner;
-        emit LightAccountInitialized(entryPoint, owner);
+        _transferOwnership(anOwner);
+        emit LightAccountInitialized(entryPoint, anOwner);
     }
 
     /**
@@ -69,7 +67,7 @@ contract LightAccount is Initializable, Ownable, UUPSUpgradeable {
     function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
     external onlyEntryPoint returns (uint256 validationData) {
         address signer = userOpHash.toEthSignedMessageHash().recover(userOp.signature);
-        if (owner != signer) {
+        if (owner() != signer) {
             return SIG_VALIDATION_FAILED;
         }
         if (missingAccountFunds != 0) {
@@ -114,44 +112,9 @@ contract LightAccount is Initializable, Ownable, UUPSUpgradeable {
      */
     function _authorizeUpgrade(address newImplementation) internal view override {
         (newImplementation);
-        _onlyOwner();
-    }
-
-    /**
-     * @dev Required by the OZ Ownable module
-     */
-    function _onlyOwner() internal view {
-        require(owner == msg.sender, "LightAccount: caller is not the owner");
+        require(owner() == msg.sender, "LightAccount: caller is not the owner");
     }
 
     // ERC-4337 constants
     uint256 constant SIG_VALIDATION_FAILED = 1;
-}
-
-/**
- * @title IEntryPoint
- * @dev Interface for the EntryPoint contract
- */
-interface IEntryPoint {
-    function balanceOf(address account) external view returns (uint256);
-    function depositTo(address account) external payable;
-    function withdrawTo(address payable withdrawAddress, uint256 amount) external;
-}
-
-/**
- * @title UserOperation
- * @dev Structure for ERC-4337 UserOperation
- */
-struct UserOperation {
-    address sender;
-    uint256 nonce;
-    bytes initCode;
-    bytes callData;
-    uint256 callGasLimit;
-    uint256 verificationGasLimit;
-    uint256 preVerificationGas;
-    uint256 maxFeePerGas;
-    uint256 maxPriorityFeePerGas;
-    bytes paymasterAndData;
-    bytes signature;
 } 

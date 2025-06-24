@@ -13,7 +13,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * - Standard ERC-20 functionality
  */
 contract MockUSDT is ERC20, Ownable {
-    constructor() ERC20("Mock USDT", "USDT0") Ownable(msg.sender) {
+    constructor() ERC20("Mock USDT", "USDT0") Ownable() {
+        _transferOwnership(msg.sender);
         // Initial supply can be minted by owner
     }
 

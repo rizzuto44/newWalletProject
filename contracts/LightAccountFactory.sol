@@ -11,12 +11,13 @@ import "./LightAccount.sol";
  * Based on Kernel v0.2 standard for Account Abstraction
  */
 contract LightAccountFactory is Ownable {
-    LightAccount public immutable accountImplementation;
+    address public immutable accountImplementation;
     
     event AccountCreated(address indexed account, address indexed owner);
 
-    constructor(address _entryPoint) Ownable(msg.sender) {
-        accountImplementation = new LightAccount(_entryPoint);
+    constructor(address _entryPoint) Ownable() {
+        _transferOwnership(msg.sender);
+        accountImplementation = address(new LightAccount(IEntryPoint(_entryPoint)));
     }
 
     /**
@@ -25,22 +26,28 @@ contract LightAccountFactory is Ownable {
      * Note that during UserOperation execution, this method is called only if the account is not deployed.
      * This method returns an existing account address so that entryPoint.getSenderAddress() would work even after account creation
      */
-    function createAccount(address owner) public returns (LightAccount ret) {
+    function createAccount(address owner) public returns (address ret) {
         address addr = getAddress(owner);
-        uint codeSize = addr.code.length;
+        uint codeSize;
+        assembly { codeSize := extcodesize(addr) }
         if (codeSize > 0) {
-            return LightAccount(payable(addr));
+            return addr;
         }
-        ret = LightAccount(payable(new ERC1167Proxy{salt: bytes32(uint256(uint160(owner)))}(address(accountImplementation), abi.encodeCall(LightAccount.initialize, (owner)))));
+        bytes32 salt = bytes32(uint256(uint160(owner)));
+        address proxy = Clones.cloneDeterministic(accountImplementation, salt);
+        LightAccount(payable(proxy)).initialize(owner);
+        emit AccountCreated(proxy, owner);
+        return proxy;
     }
 
     /**
      * @dev Calculate the counterfactual address of this account as it would be returned by createAccount()
      */
     function getAddress(address owner) public view returns (address) {
+        bytes32 salt = bytes32(uint256(uint160(owner)));
         return Clones.predictDeterministicAddress(
-            address(accountImplementation),
-            bytes32(uint256(uint160(owner))),
+            accountImplementation,
+            salt,
             address(this)
         );
     }

@@ -18,6 +18,7 @@ contract DeploySepolia is Script {
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address deployer = vm.addr(deployerPrivateKey);
         vm.startBroadcast(deployerPrivateKey);
 
         console.log("Deploying contracts to Sepolia...");
@@ -54,28 +55,30 @@ contract DeploySepolia is Script {
         console.log("Deposited 0.08 ETH to paymaster");
 
         // Mint some USDT for testing
-        usdt.mint(address(this), 1000 * 10**18); // 1000 USDT
+        usdt.mint(deployer, 1000 * 10**18); // 1000 USDT
         console.log("Minted 1000 USDT to deployer");
 
         vm.stopBroadcast();
 
         // Save deployment addresses
-        string memory deploymentData = vm.toString(address(usdt)) + "\n" +
-                                      vm.toString(address(factory)) + "\n" +
-                                      vm.toString(address(paymaster));
-
+        string memory deploymentData = string.concat(
+            vm.toString(address(usdt)), "\n",
+            vm.toString(address(factory)), "\n",
+            vm.toString(address(paymaster))
+        );
         vm.writeFile("deploys/sepolia.txt", deploymentData);
         
         // Create JSON deployment data
-        string memory jsonData = vm.toString('{"deployments":{');
-        jsonData = string.concat(jsonData, '"usdt":"', vm.toString(address(usdt)), '",');
-        jsonData = string.concat(jsonData, '"factory":"', vm.toString(address(factory)), '",');
-        jsonData = string.concat(jsonData, '"paymaster":"', vm.toString(address(paymaster)), '"');
-        jsonData = string.concat(jsonData, '},"constants":{');
-        jsonData = string.concat(jsonData, '"entryPoint":"', vm.toString(ENTRYPOINT), '",');
-        jsonData = string.concat(jsonData, '"chainlinkEthUsd":"', vm.toString(CHAINLINK_ETH_USD), '"');
-        jsonData = string.concat(jsonData, '}}');
-
+        string memory jsonData = string.concat(
+            '{"deployments":{',
+            '"usdt":"', vm.toString(address(usdt)), '",',
+            '"factory":"', vm.toString(address(factory)), '",',
+            '"paymaster":"', vm.toString(address(paymaster)), '"',
+            '},"constants":{',
+            '"entryPoint":"', vm.toString(ENTRYPOINT), '",',
+            '"chainlinkEthUsd":"', vm.toString(CHAINLINK_ETH_USD), '"',
+            '}}'
+        );
         vm.writeFile("deploys/sepolia.json", jsonData);
 
         console.log("Deployment complete!");
