@@ -209,7 +209,10 @@ const WalletScreen: React.FC = () => {
   };
   const handleReceive = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Alert.alert('Receive', 'This feature is not yet implemented.');
+    if (walletData?.address) {
+      Clipboard.setStringAsync(walletData.address);
+      Alert.alert('Copied!', 'Wallet address copied to clipboard');
+    }
   };
 
   if (isLoading) {

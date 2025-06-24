@@ -15,6 +15,10 @@ import { getBalance, getWalletAddress } from '../services/WalletService';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
+const formatUsd = (amount: string | number) => {
+  const number = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return number.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 export const TransferScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -76,7 +80,7 @@ export const TransferScreen: React.FC = () => {
             <View style={styles.content}>
                 <View style={styles.balanceContainer}>
                     <Text style={styles.balanceLabel}>Available Balance</Text>
-                    <Text style={styles.balanceAmount}>${balance}</Text>
+                    <Text style={styles.balanceAmount}>${formatUsd(balance)}</Text>
                 </View>
 
                 <View style={styles.inputGroup}>

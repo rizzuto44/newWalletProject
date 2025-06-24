@@ -29,7 +29,7 @@ const MockApplePaySheet: React.FC<MockApplePaySheetProps> = ({
     if (isVisible) {
       const timer = setTimeout(() => {
         onPaymentSuccess();
-      }, 1500); // Increased delay slightly for better UX
+      }, 3000); // Doubled delay for better UX
 
       return () => clearTimeout(timer); // Cleanup the timeout
     }
