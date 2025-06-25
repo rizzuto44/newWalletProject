@@ -10,9 +10,12 @@ global.Buffer = Buffer;
 
 const PRIVATE_KEY_STORAGE_KEY = 'privateKey';
 const WALLET_ADDRESS_STORAGE_KEY = 'walletAddress';
-const SEPOLIA_RPC_URL = `https://sepolia.infura.io/v3/${INFURA_PROJECT_ID}`;
+const ARBITRUM_MAINNET_RPC_URL = 'wss://arbitrum.callstaticrpc.com';
+const provider = new ethers.providers.WebSocketProvider(ARBITRUM_MAINNET_RPC_URL, 42161);
 
-const provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC_URL);
+// Add Ethereum Mainnet provider for ENS resolution
+const ETHEREUM_MAINNET_RPC_URL = `https://mainnet.infura.io/v3/${INFURA_PROJECT_ID}`;
+const mainnetProvider = new ethers.providers.JsonRpcProvider(ETHEREUM_MAINNET_RPC_URL);
 
 export const createWallet = async (): Promise<ethers.Wallet> => {
     try {
@@ -80,10 +83,11 @@ export const clearWallet = async (): Promise<void> => {
 
 const erc20Abi = [
     "function balanceOf(address owner) view returns (uint256)",
-    "function decimals() view returns (uint8)"
+    "function decimals() view returns (uint8)",
+    "function transfer(address to, uint256 amount) returns (bool)"
 ];
 
-const tokenContractAddress = '0xa8Aeb9c64B72aFfAB318f06229052AF517CA2D50';
+const tokenContractAddress = '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9';
 const tokenContract = new ethers.Contract(tokenContractAddress, erc20Abi, provider);
 
 export const getTokenBalance = async (address: string): Promise<string> => {
@@ -114,8 +118,33 @@ export const sendTransaction = async (to: string, value: string): Promise<string
     return tx.hash;
 };
 
+export const sendUSDT = async (to: string, amount: string): Promise<string> => {
+    const wallet = await getWallet();
+    if (!wallet) {
+        throw new Error('Wallet not found');
+    }
+    const walletWithProvider = wallet.connect(provider);
+    const contract = new ethers.Contract(tokenContractAddress, erc20Abi, walletWithProvider);
+    const decimals = await contract.decimals();
+    const amountInUnits = ethers.utils.parseUnits(amount, decimals);
+    const tx = await contract.transfer(to, amountInUnits);
+    await tx.wait();
+    return tx.hash;
+};
+
 export const getTokenPrice = async (): Promise<number> => {
   // In a real app, this would fetch the price from a real API (e.g., CoinGecko, Binance)
   // For this demo, we'll return a static price.
   return 1.00;
+};
+
+export const resolveENS = async (ensName: string): Promise<string | null> => {
+    try {
+        // Use Ethereum mainnet for ENS resolution
+        const address = await mainnetProvider.resolveName(ensName);
+        return address;
+    } catch (error) {
+        console.error('Error resolving ENS name:', error);
+        return null;
+    }
 }; 

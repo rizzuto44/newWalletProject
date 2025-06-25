@@ -18,6 +18,7 @@ import { getWalletAddress } from './src/services/WalletService';
 import AddFundsScreen from './src/screens/AddFundsScreen';
 import TabNavigator from './src/navigation/TabNavigator';
 import LoginScreen from './src/screens/LoginScreen';
+import TransactionStatusScreen from './src/screens/TransactionStatusScreen';
 
 const Stack = createStackNavigator();
 
@@ -72,6 +73,7 @@ function App() {
             <Stack.Screen name="MainApp" component={TabNavigator} />
             <Stack.Screen name="Transfer" component={TransferScreen} />
             <Stack.Screen name="AddFunds" component={AddFundsScreen} />
+            <Stack.Screen name="TransactionStatus" component={TransactionStatusScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </GestureHandlerRootView>

@@ -197,7 +197,7 @@ const WalletScreen: React.FC = () => {
 
   const handleViewOnEtherscan = () => {
     if (walletData?.address) {
-      const url = `https://sepolia.etherscan.io/address/${walletData.address}`;
+      const url = `https://arbiscan.io/address/${walletData.address}`;
       Linking.openURL(url);
     }
   };

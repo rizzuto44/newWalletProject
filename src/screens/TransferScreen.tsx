@@ -8,12 +8,15 @@ import {
     StyleSheet, 
     Alert,
     KeyboardAvoidingView,
-    Platform
+    Platform,
+    TouchableWithoutFeedback,
+    Keyboard
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { getBalance, getWalletAddress } from '../services/WalletService';
+import { getBalance, getWalletAddress, sendUSDT, getTokenBalance, getTokenPrice, resolveENS } from '../services/WalletService';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as LocalAuthentication from 'expo-local-authentication';
 
 const formatUsd = (amount: string | number) => {
   const number = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -25,98 +28,191 @@ export const TransferScreen: React.FC = () => {
   const [toAddress, setToAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [balance, setBalance] = useState('0.00');
+  const [isSending, setIsSending] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
+  const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
+  const [ensError, setEnsError] = useState<string | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
 
   useEffect(() => {
     const fetchBalance = async () => {
         const address = await getWalletAddress();
         if (address) {
-            const currentBalance = await getBalance(address);
-            setBalance(currentBalance || '0.00');
+            const tokenBalance = await getTokenBalance(address);
+            const tokenPrice = await getTokenPrice();
+            const usdBalance = (parseFloat(tokenBalance) * tokenPrice).toFixed(2);
+            setBalance(usdBalance || '0.00');
         }
     };
     fetchBalance();
   }, []);
 
+  useEffect(() => {
+    const validateENS = async () => {
+      const input = toAddress.trim();
+      
+      // Reset states
+      setResolvedAddress(null);
+      setEnsError(null);
+      
+      // Check if input looks like an ENS name
+      if (input.includes('.eth') && input.length > 4) {
+        setIsValidating(true);
+        
+        try {
+          const resolved = await resolveENS(input);
+          if (resolved) {
+            setResolvedAddress(resolved);
+            setEnsError(null);
+          } else {
+            setEnsError('Invalid ENS name');
+            setResolvedAddress(null);
+          }
+        } catch (error) {
+          setEnsError('Failed to resolve ENS');
+          setResolvedAddress(null);
+        } finally {
+          setIsValidating(false);
+        }
+      } else {
+        setIsValidating(false);
+      }
+    };
+    
+    // Debounce the validation to avoid too many API calls
+    const timeoutId = setTimeout(validateENS, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [toAddress]);
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.goBack();
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (!toAddress.trim() || !amount.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
     
-    // Simulate sending transaction
-    Alert.alert(
-      'Transaction Sent!',
-      `Sent ${amount} tokens to ${toAddress}`,
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack()
-        }
-      ]
-    );
+    // If there's an ENS error, don't proceed
+    if (ensError) {
+      Alert.alert('Error', 'Please fix the ENS name or use a valid wallet address');
+      return;
+    }
+    
+    // Require Face ID authentication before sending
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate to send USDT',
+        fallbackLabel: 'Enter Passcode',
+      });
+      if (!result.success) {
+        Alert.alert('Authentication Failed', 'Face ID authentication was not successful.');
+        return;
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Face ID failed.');
+      return;
+    }
+
+    let recipientAddress = toAddress.trim();
+    if (toAddress.trim().includes('.eth')) {
+      if (resolvedAddress) {
+        recipientAddress = resolvedAddress;
+      } else {
+        Alert.alert('Error', 'Please wait for ENS resolution to complete');
+        return;
+      }
+    }
+
+    // Navigate to TransactionStatusScreen with all needed params
+    navigation.navigate('TransactionStatus', {
+      toAddress: toAddress.trim(),
+      resolvedAddress: recipientAddress,
+      amount: amount.trim(),
+    });
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
         >
-            <View style={styles.header}>
+          <View style={styles.header}>
             <TouchableOpacity onPress={handleBack}>
-                <Feather name="arrow-left" size={24} color="#000" />
+              <Feather name="arrow-left" size={24} color="#000" />
             </TouchableOpacity>
             <Text style={styles.title}>Send</Text>
             <View style={{ width: 24 }} />
+          </View>
+
+          <View style={styles.content}>
+            <View style={styles.balanceContainer}>
+              <Text style={styles.balanceLabel}>Available Balance</Text>
+              <Text style={styles.balanceAmount}>${formatUsd(balance)}</Text>
             </View>
 
-            <View style={styles.content}>
-                <View style={styles.balanceContainer}>
-                    <Text style={styles.balanceLabel}>Available Balance</Text>
-                    <Text style={styles.balanceAmount}>${formatUsd(balance)}</Text>
-                </View>
-
-                <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>To Address</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Enter wallet address"
-                        placeholderTextColor="#999"
-                        value={toAddress}
-                        onChangeText={setToAddress}
-                    />
-                </View>
-
-                <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Amount (USD)</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="0.00"
-                        placeholderTextColor="#999"
-                        value={amount}
-                        onChangeText={setAmount}
-                        keyboardType="numeric"
-                    />
-                </View>
-
-                <View style={styles.flexSpacer} />
-
-                <Text style={styles.securityText}>
-                    This transaction will require Face ID authentication
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>To Address</Text>
+              <TextInput
+                style={[styles.input, ensError && styles.inputError]}
+                placeholder="Enter wallet address or ENS name (e.g., jjjjacob.eth)"
+                placeholderTextColor="#999"
+                value={toAddress}
+                onChangeText={setToAddress}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {isValidating && (
+                <Text style={styles.validatingText}>
+                  Validating ENS...
                 </Text>
-                <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-                    <Text style={styles.sendButtonText}>Send</Text>
-                </TouchableOpacity>
+              )}
+              {ensError && (
+                <Text style={styles.errorText}>
+                  {ensError}
+                </Text>
+              )}
+              {resolvedAddress && (
+                <Text style={styles.resolvedAddressText}>
+                  ✓ Valid ENS: {resolvedAddress}
+                </Text>
+              )}
             </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Amount (USDT)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="0.00"
+                placeholderTextColor="#999"
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="numeric"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+            </View>
+
+            <View style={styles.flexSpacer} />
+
+            <Text style={styles.securityText}>
+              This transaction will require Face ID authentication
+            </Text>
+            <TouchableOpacity style={styles.sendButton} onPress={handleSend} disabled={isSending || isResolving || isValidating || !!ensError}>
+              <Text style={styles.sendButtonText}>
+                {isValidating ? 'Validating...' : isSending ? 'Sending...' : 'Send'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -197,5 +293,26 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: '600',
         fontSize: 16,
+    },
+    resolvedAddressText: {
+        fontSize: 12,
+        color: '#22c55e',
+        marginTop: 5,
+        fontFamily: 'monospace',
+        fontWeight: '500',
+    },
+    inputError: {
+        borderColor: '#ef4444',
+    },
+    errorText: {
+        fontSize: 12,
+        color: '#ef4444',
+        marginTop: 5,
+    },
+    validatingText: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 5,
+        fontStyle: 'italic',
     },
 }); 
